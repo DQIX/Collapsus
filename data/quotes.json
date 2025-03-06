@@ -1,34 +1,48 @@
 {
-    "quotes": [
-        {
-            "name": "BQ",
-            "author": 263694336040894465,
-            "content": "**Base Quality is based on:**```yml\n- Hero Highest level across all 12 vocations.\n- Hero Highest revocation number across all 12 vocations\n- The level of the last grotto beaten.```**Quality Ranges Between: 2 - 248\nExample BQ Calculation:**\n```yml\nHero Highest Level: 99\nHero Highest Revocation: +10\n(Each Revocation Adds 5 Quality, So 10*5 = 50)\nLevel of Last Grotto Beaten: 99\n99 + 50 + 99 = 248```",
-            "image": "",
-            "aliases": [
-                "bq"
-            ]
-        },
-        {
-            "name": "Spreadsheet",
-            "author": 263694336040894465,
-            "content": "You can find this information in my [DQIX spreadsheet](<https://docs.google.com/spreadsheets/d/10NEB9Kf_K6S1KAKvqHE-wt6VLY9vvSPeMWMvNKjR0Rg>).",
-            "image": "",
-            "aliases": []
-        },
-        {
-            "name": "OldSchool",
-            "author": 263694336040894465,
-            "content": "A lot of information within <#1143509536783736965> are made cleaner than it used to be, however I know it's easier to link the regular archived channels still.\nIf you'd prefer having access to these old channels, type `?rank OldSchool` in <#692867688325709835>",
-            "image": "",
-            "aliases": []
-        },
-        {
-            "name": "Metal Monsters",
-            "author": 263694336040894465,
-            "content": "Metal Monsters:",
-            "image": "https://cdn.discordapp.com/attachments/973619817317797919/1259894814682517606/unknown.png?ex=668d57fb&is=668c067b&hm=adf1a46e9534f2229468df85d9f1f206ca682cb7350601b1f68efae9538bdd75&",
-            "aliases": []
-        }
-    ]
+  "quotes": [
+    {
+      "name": "BQ",
+      "author": 263694336040894465,
+      "content": "**Base Quality is based on:**```yml\n- Hero Highest level across all 12 vocations.\n- Hero Highest revocation number across all 12 vocations\n- The level of the last grotto beaten.```**Quality Ranges Between: 2 - 248\nExample BQ Calculation:**\n```yml\nHero Highest Level: 99\nHero Highest Revocation: +10\n(Each Revocation Adds 5 Quality, So 10*5 = 50)\nLevel of Last Grotto Beaten: 99\n99 + 50 + 99 = 248```",
+      "image": "",
+      "aliases": [
+        "bq"
+      ]
+    },
+    {
+      "name": "Spreadsheet",
+      "author": 263694336040894465,
+      "content": "You can find this information in my [DQIX spreadsheet](<https://docs.google.com/spreadsheets/d/10NEB9Kf_K6S1KAKvqHE-wt6VLY9vvSPeMWMvNKjR0Rg>).",
+      "image": "",
+      "aliases": []
+    },
+    {
+      "name": "OldSchool",
+      "author": 263694336040894465,
+      "content": "A lot of information within <#1143509536783736965> are made cleaner than it used to be, however I know it's easier to link the regular archived channels still.\nIf you'd prefer having access to these old channels, type `?rank OldSchool` in <#692867688325709835>",
+      "image": "",
+      "aliases": []
+    },
+    {
+      "name": "Metal Monsters",
+      "author": 263694336040894465,
+      "content": "Metal Monsters:",
+      "image": "https://cdn.discordapp.com/attachments/973619817317797919/1259894814682517606/unknown.png?ex=668d57fb&is=668c067b&hm=adf1a46e9534f2229468df85d9f1f206ca682cb7350601b1f68efae9538bdd75&",
+      "aliases": []
+    },
+    {
+      "name": "map",
+      "author": 263694336040894465,
+      "content": "[Interactive Map Tool](<https://www.woodus.com/den/games/dq9ds/interactivemap/worldmap.htm>)",
+      "image": "",
+      "aliases": []
+    },
+    {
+      "name": "tension",
+      "author": 263694336040894465,
+      "content": "```5 Tension = (Damage * 1.5) + 1*(1+(Level/10))\n20 Tension = (Damage * 2.5) + 2*(1+(Level/10))\n50 Tension = (Damage * 4.0) + 3*(1+(Level/10))\n100 Tension = (Damage * 6.0) + 4*(1+(Level/10))```",
+      "image": "",
+      "aliases": []
+    }
+  ]
 }
