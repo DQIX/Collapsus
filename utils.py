@@ -7,12 +7,13 @@ import requests
 from PIL import Image
 from discord.ext.pages import Paginator, Page
 
-dev_tag = "@CompuGeniusPrograms"
+dev_tag = "@CompuGeniusCode"
 dev_patreon = "patreon.com/compugeniusprograms"
+dev_patreon = "cash.app/$compugeniuscode"
 
 
 def create_embed(title, description=None, color=discord.Color.green(),
-                 footer="Consider supporting development:\n%s" % dev_patreon,
+                 footer="Consider supporting development:\n%s\n%s" % (dev_patreon, dev_cashapp),
                  error="Any errors? Please report to %s" % dev_tag, image="", *, url="", author=""):
     embed = discord.Embed(title=title, description=description, url=url, color=color)
     embed.set_footer(text="%s\n%s" % (footer, error))
