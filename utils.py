@@ -9,7 +9,7 @@ from discord.ext.pages import Paginator, Page
 
 dev_tag = "@CompuGeniusCode"
 dev_patreon = "patreon.com/compugeniusprograms"
-dev_patreon = "cash.app/$compugeniuscode"
+dev_cashapp = "cash.app/$compugeniuscode"
 
 
 def create_embed(title, description=None, color=discord.Color.green(),
