@@ -1,48 +1,71 @@
 {
-  "quotes": [
-    {
-      "name": "BQ",
-      "author": 263694336040894465,
-      "content": "**Base Quality is based on:**```yml\n- Hero Highest level across all 12 vocations.\n- Hero Highest revocation number across all 12 vocations\n- The level of the last grotto beaten.```**Quality Ranges Between: 2 - 248\nExample BQ Calculation:**\n```yml\nHero Highest Level: 99\nHero Highest Revocation: +10\n(Each Revocation Adds 5 Quality, So 10*5 = 50)\nLevel of Last Grotto Beaten: 99\n99 + 50 + 99 = 248```",
-      "image": "",
-      "aliases": [
-        "bq"
-      ]
-    },
-    {
-      "name": "Spreadsheet",
-      "author": 263694336040894465,
-      "content": "You can find this information in my [DQIX spreadsheet](<https://docs.google.com/spreadsheets/d/10NEB9Kf_K6S1KAKvqHE-wt6VLY9vvSPeMWMvNKjR0Rg>).",
-      "image": "",
-      "aliases": []
-    },
-    {
-      "name": "OldSchool",
-      "author": 263694336040894465,
-      "content": "A lot of information within <#1143509536783736965> are made cleaner than it used to be, however I know it's easier to link the regular archived channels still.\nIf you'd prefer having access to these old channels, type `?rank OldSchool` in <#692867688325709835>",
-      "image": "",
-      "aliases": []
-    },
-    {
-      "name": "Metal Monsters",
-      "author": 263694336040894465,
-      "content": "Metal Monsters:",
-      "image": "https://cdn.discordapp.com/attachments/973619817317797919/1259894814682517606/unknown.png?ex=668d57fb&is=668c067b&hm=adf1a46e9534f2229468df85d9f1f206ca682cb7350601b1f68efae9538bdd75&",
-      "aliases": []
-    },
-    {
-      "name": "map",
-      "author": 263694336040894465,
-      "content": "[Interactive Map Tool](<https://www.woodus.com/den/games/dq9ds/interactivemap/worldmap.htm>)",
-      "image": "",
-      "aliases": []
-    },
-    {
-      "name": "tension",
-      "author": 263694336040894465,
-      "content": "```5 Tension = (Damage * 1.5) + 1*(1+(Level/10))\n20 Tension = (Damage * 2.5) + 2*(1+(Level/10))\n50 Tension = (Damage * 4.0) + 3*(1+(Level/10))\n100 Tension = (Damage * 6.0) + 4*(1+(Level/10))```",
-      "image": "",
-      "aliases": []
-    }
-  ]
+    "quotes": [
+        {
+            "name": "BQ",
+            "author": 263694336040894465,
+            "content": "**Base Quality is based on:**```yml\n- Hero Highest level across all 12 vocations.\n- Hero Highest revocation number across all 12 vocations\n- The level of the last grotto beaten.```**Quality Ranges Between: 2 - 248\nExample BQ Calculation:**\n```yml\nHero Highest Level: 99\nHero Highest Revocation: +10\n(Each Revocation Adds 5 Quality, So 10*5 = 50)\nLevel of Last Grotto Beaten: 99\n99 + 50 + 99 = 248```",
+            "image": "",
+            "aliases": [
+                "bq"
+            ]
+        },
+        {
+            "name": "Spreadsheet",
+            "author": 263694336040894465,
+            "content": "You can find this information in my [DQIX spreadsheet](<https://docs.google.com/spreadsheets/d/10NEB9Kf_K6S1KAKvqHE-wt6VLY9vvSPeMWMvNKjR0Rg>).",
+            "image": "",
+            "aliases": []
+        },
+        {
+            "name": "OldSchool",
+            "author": 263694336040894465,
+            "content": "A lot of information within <#1143509536783736965> are made cleaner than it used to be, however I know it's easier to link the regular archived channels still.\nIf you'd prefer having access to these old channels, type `?rank OldSchool` in <#692867688325709835>",
+            "image": "",
+            "aliases": []
+        },
+        {
+            "name": "Metal Monsters",
+            "author": 263694336040894465,
+            "content": "Metal Monsters:",
+            "image": "https://cdn.discordapp.com/attachments/973619817317797919/1259894814682517606/unknown.png?ex=668d57fb&is=668c067b&hm=adf1a46e9534f2229468df85d9f1f206ca682cb7350601b1f68efae9538bdd75&",
+            "aliases": []
+        },
+        {
+            "name": "map",
+            "author": 263694336040894465,
+            "content": "[Interactive Map Tool](<https://www.woodus.com/den/games/dq9ds/interactivemap/worldmap.htm>)",
+            "image": "",
+            "aliases": []
+        },
+        {
+            "name": "tension",
+            "author": 263694336040894465,
+            "content": "```5 Tension = (Damage * 1.5) + 1*(1+(Level/10))\n20 Tension = (Damage * 2.5) + 2*(1+(Level/10))\n50 Tension = (Damage * 4.0) + 3*(1+(Level/10))\n100 Tension = (Damage * 6.0) + 4*(1+(Level/10))```",
+            "image": "",
+            "aliases": []
+        },
+        {
+            "name": "Emulator Multiplayer",
+            "author": 496392770374860811,
+            "content": "https://proquestinations.com/dragon-quest-ix-online-multiplayer-through-parsec-melonds-proquest-005/",
+            "image": "",
+            "aliases": [
+                "MelonDS + Parsec"
+            ]
+        },
+        {
+            "name": "LegacyLocations",
+            "author": 263694336040894465,
+            "content": "```yml\nDragonlord - Grotto Greygnarl Drop\nMalroth    - Lonely Coast cliff cave; DLC Quest 151\nBaramos    - Cringle Coast island cave; Normal Quest 62\nZoma       - Cringle Coast island field; DLC Quest 167\nPsaro      - Lv16+ Dragonlord Drop\nEstark     - Cringle Coast island house; DLC Quest 152\nNimzo      - Lv16+ Psaro Drop\nMurdaw     - Lv16+ Baramos Drop\nMortamor   - Heights of Loneliness cave entrance; DLC Quest 158\nNokturnus  - Lonely Coast cliff cave; DLC Quest 184\nOrgodemir  - Urdus Marshland cliff well; DLC Quest 176\nDhoulmagus - Lv16+ Murdaw Drop\nRhapthorne - Wyrmtail cliff cave; DLC Quest 179```",
+            "image": "",
+            "aliases": []
+        },
+        {
+            "name": "Story Boss Weaknesses",
+            "author": 496392770374860811,
+            "content": "Story\n\n||1. Hexagoon - N/A\n2. Wight Knight - Fire & Wind\n3. Morag - Wind, Earth & Light\n4. Ragin' Contagion - Fire & Light\n5. Master of Nu'un - Earth & Light\n6. Lleviathan - Blast\n7. Garth Goyle - Wind\n8. Tyrantula - Blast, Dark & Light\n9. Grand Lizzier - Dark & Light\n10. Larstastnaras - Light\n11. Dreadmaster - N/A\n12. Gadrongo - Wind\n13. Greygnarl - Ice & Dark\n14. Goreham-Hogg - Light\n15. Hootingham-Gore - Light\n16. Goresby-Purrvis - Wind, Blast & Dark\n17. King Godwyn - Light\n18. Barbarus - Light\n19. Corvus - Light||\n\nDLC\n\n||20. Yore - Wind\n21. Rover - Fire & Light\n22. King Godfrey - Wind & Light\n23. Tyrannosaura Wrecks - Blast & Light\n24. Nodoph - Dark & Light||",
+            "image": "",
+            "aliases": []
+        }
+    ]
 }

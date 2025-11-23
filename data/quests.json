@@ -260,7 +260,7 @@
       "location": "Zere (Man outside of the church).",
       "request": "Scare 10 Betterflies.",
       "solution": "Have someone at a high enough level to make the Betterflies flee from you in battle. Level 25 is sufficient.",
-      "reward": "Seed of Defence; Toad Oil for repeat.",
+      "reward": "Seed of Defence (Toad Oil for repeat).",
       "prerequisite": "Need a character that has a high enough level to scare a Betterfly.",
       "repeat": true
     },
@@ -282,7 +282,7 @@
       "location": "Coffinwell (Outside the Mayors house).",
       "request": "Kill 10 Sluggers.",
       "solution": "You can find Sluggers outside of Coffinwell.",
-      "reward": "Mini Medal; Snakeskin for Repeat.",
+      "reward": "Mini Medal (Snakeskin for Repeat).",
       "prerequisite": "You have to have visited Alltrades Abbey.",
       "repeat": true
     },
@@ -326,7 +326,7 @@
       "location": "Gleeba (Soldier in SW House in Gleeba).",
       "request": "Bring him 5 Grubby Bandages.",
       "solution": "They can be stolen from Mummy (#098) in the Plumbed Depths in Gleeba.",
-      "reward": "Ruby of Protection; Corundum for repeat.",
+      "reward": "Ruby of Protection (Corundum for repeat).",
       "prerequisite": "None",
       "repeat": true
     },
@@ -392,7 +392,7 @@
       "location": "Swinedimples Academy (Girl inside the school, near the church).",
       "request": "Bring her Holy Water and 2 Royal Soils.",
       "solution": "Buy the Holy Water and get the Royal Soil from the spawn points.",
-      "reward": "Salute Party Trick; Thunderball for repeat.",
+      "reward": "Salute Party Trick (Thunderball for repeat).",
       "prerequisite": "None",
       "repeat": true
     },
@@ -403,7 +403,7 @@
       "location": "Pluvi Island (Small island southeast of Gleeba, Man inside a well).",
       "request": "Bring him 3 Belle Caps.",
       "solution": "Find them at spawn points.",
-      "reward": "Finessence; Magic Beast Horn for repeat.",
+      "reward": "Finessence (Magic Beast Horn for repeat).",
       "prerequisite": "None",
       "repeat": true
     },
@@ -414,7 +414,7 @@
       "location": "Wormwood Creek (Man inside weapons shop).",
       "request": "Give a scarf to 3 types of Sanguini.",
       "solution": "Defeat each Sanguini until they accept the scarf. Teeny Sanguini (#003) is by Angel Falls, Pink Sanguini (#080) is by Bloomingdale and the Genie Sanguini (#189) is on a small island north of the lake by Stornway.",
-      "reward": "Elfin Elixir; Mystifying Mixture for repeat.",
+      "reward": "Elfin Elixir (Mystifying Mixture for repeat).",
       "prerequisite": "None",
       "repeat": true
     },
@@ -447,7 +447,7 @@
       "location": "Angel Falls (Professor by the well).",
       "request": "Bring him a Goododendron which is dropped by Slime (#001).",
       "solution": "Defeat Slimes until you get the flower",
-      "reward": "Seed of Agility; Nectar for repeat.",
+      "reward": "Seed of Agility (Nectar for repeat).",
       "prerequisite": "Post-game",
       "repeat": true
     },
@@ -524,7 +524,7 @@
       "location": "Slurry Quay (Barrel at the dock).",
       "request": "Bring it Holy Water, Freshwater, and Magic Water.",
       "solution": "Buy the Holy Water and Magic Water from item shops and get Fresh Water from the spawn points.",
-      "reward": "Seed of Defence; Gleeban Guinea for repeat.",
+      "reward": "Seed of Defence (Gleeban Guinea for repeat)",
       "prerequisite": "Post-game",
       "repeat": true
     },
@@ -579,7 +579,7 @@
       "location": "Wormwood creek (Boy in item shop).",
       "request": "Get a Magmalice Handprint.",
       "solution": "Defeat Magmalice (#168) in Magmaroo until they drop the item.",
-      "reward": "Prince's Pea Coat; Bow Tie for repeat.",
+      "reward": "Prince's Pea Coat (Bow Tie for repeat).",
       "prerequisite": "Post-game",
       "repeat": true
     },
@@ -590,7 +590,7 @@
       "location": "Wormwood creek (Girl inside the inn).",
       "request": "Get a Mega Moai Headprint.",
       "solution": "Defeat mega moai (#167) in Magmaroo until they drop the item.",
-      "reward": "Princess's Robe; Pink Pearl for repeat.",
+      "reward": "Princess's Robe (Pink Pearl for repeat).",
       "prerequisite": "Post-game",
       "repeat": true
     },
@@ -612,7 +612,7 @@
       "location": "Island at eastern Stornway (Man in southern house).",
       "request": "Retrieve the Memento Necklace.",
       "solution": "After accepting the request, speak the man in the northern house at night to discover that the necklace was stolen by an Abyss Diver (#170). Keep fighting this monster near the four corners of the sea until it drops the item.",
-      "reward": "Seed of Defence; Strength Ring for repeat.",
+      "reward": "Seed of Defence (Strength Ring for repeat).",
       "prerequisite": "Post-game and Sterling's Whistle",
       "repeat": true
     },
@@ -623,7 +623,7 @@
       "location": "Island at eastern Stornway (Man in northern house).",
       "request": "Retrieve the Memento Necklace.",
       "solution": "At night speak to the man in the southern house to find out that a Pink Sanguini (#080) stole the necklace. Defeat them in Bloomingdale until the item drops.",
-      "reward": "Seed of Agility; Agility Ring for repeat.",
+      "reward": "Seed of Agility (Agility Ring for repeat).",
       "prerequisite": "Post-game and Sterling's Whistle",
       "repeat": true
     },
@@ -765,7 +765,7 @@
       "story": false,
       "location": "Swinedimples Academy (Bench to the west in the courtyard).",
       "request": "Bring Molten Magma and Toad Oil to the Old Man.",
-      "solution": "Molten Magma by",
+      "solution": "Molten Magma by defeating Live Lavas (#165) from Magmaroo and Toad Oil by defeating Gloomy Gastropogs (#172) in the Gittish Empire. Bring them back to the old man.",
       "reward": "Wands and beyond (The Zing Stick Ability).",
       "prerequisite": "Quest #69 must have been beaten and a Party Member with 100 Wand Skill.",
       "repeat": false
