@@ -111,7 +111,7 @@ async def _quest(ctx, quest_number: Option(int, "Quest Number (1-184)", required
             reward = "||%s||" % reward
         embed.add_field(name="Reward", value=reward, inline=False)
     embed.add_field(name="Repeat", value="Yes" if quest.repeat else "No", inline=False)
-    embed.add_field(name="Pre-reqs", value=quest.prerequisite, inline=False)
+    embed.add_field(name="Prerequisites", value=quest.prerequisite, inline=False)
 
     await ctx.respond(embed=embed)
 
