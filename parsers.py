@@ -33,7 +33,7 @@ class Quest:
     request: str = ""
     solution: str = ""
     reward: str = ""
-    prerequisite: str = ""
+    prerequisite: str = "None"
     repeat: bool = False
 
 
@@ -260,7 +260,7 @@ def parse_regex(type, string):
         request = ""
         solution = ""
         reward = ""
-        prerequisite = ""
+        prerequisite = "None"
         repeat = False
 
         for info in matches[1:]:
