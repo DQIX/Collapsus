@@ -1339,7 +1339,7 @@
       "request": "Bring him a Birthday Cake and Party Popper.",
       "solution": "Both can be bought in the WiFi shop. Or received from special guests in the inn on your birthday.",
       "reward": "Fingerless Gloves",
-      "prerequisite": "",
+      "prerequisite": "None",
       "repeat": false
     },
     {
@@ -1383,7 +1383,7 @@
       "request": "Bring her a Cheer-me-up herb.",
       "solution": "Use Half-Inch to steal from Boss Troll (#179) in Oubliette until you get the item.",
       "reward": "Lambswool; same for repeat",
-      "prerequisite": "",
+      "prerequisite": "None",
       "repeat": true
     },
     {
