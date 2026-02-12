@@ -1,17 +1,145 @@
 import json
-import re
+from collections import Counter
 from dataclasses import dataclass
 
 import parsers
 
-with open("data/recipes.json", "r") as data:
+with open("data/recipes.json", "r", encoding="utf-8") as data:
     recipes_data = json.load(data)["recipes"]
-recipes = [[recipe["result"]] + [item for i in range(1, 4) if recipe[f"item{i}"] for item in
-                                 [recipe[f"item{i}"], recipe[f"qty{i}"]]] for recipe in recipes_data]
 
-with open("data/item_locations.json", "r") as data:
+with open("data/item_locations.json", "r", encoding="utf-8") as data:
     location_data = json.load(data)["locations"]
-locations = [[location["result"], location["location"]] for location in location_data]
+
+_RECIPES_BY_NAME = {r["result"].strip().lower(): r for r in recipes_data if r.get("result")}
+_LOC_BY_NAME = {l["result"].strip().lower(): (l.get("location") or []) for l in location_data if l.get("result")}
+
+
+@dataclass(frozen=True)
+class CascadeRecipe:
+    name: str
+    type: str = ""
+    notes: str = ""
+    image: str = ""
+    alchemiracle: bool = False
+    location: list[str] | None = None
+
+
+def _norm(name: str) -> str:
+    return (name or "").strip().lower()
+
+
+def has_recipe(name: str) -> bool:
+    return _norm(name) in _RECIPES_BY_NAME
+
+
+def get_location(name: str) -> list[str]:
+    return list(_LOC_BY_NAME.get(_norm(name), []))
+
+
+def get_recipe(name: str) -> CascadeRecipe | None:
+    raw = _RECIPES_BY_NAME.get(_norm(name))
+    if not raw:
+        return None
+
+    recipe = parsers.Recipe.from_dict(raw)
+    loc = get_location(recipe.result)
+
+    return CascadeRecipe(
+        name=recipe.result,
+        type=recipe.type or "",
+        notes=recipe.notes or "",
+        image=recipe.image or "",
+        alchemiracle=bool(getattr(recipe, "alchemiracle", False)),
+        location=loc,
+    )
+
+
+def get_direct_ingredients(name: str) -> list[tuple[str, int]]:
+    raw = _RECIPES_BY_NAME.get(_norm(name))
+    if not raw:
+        return []
+
+    out: list[tuple[str, int]] = []
+    for i in range(1, 4):
+        item = raw.get(f"item{i}") or ""
+        qty = raw.get(f"qty{i}") or 0
+        if item:
+            try:
+                q = int(qty)
+            except Exception:
+                q = 0
+            out.append((item, q))
+    return out
+
+
+def sorted_counter_items(counter: Counter) -> list[tuple[str, int]]:
+    return sorted(((k, int(v)) for k, v in counter.items() if v), key=lambda kv: _norm(kv[0]))
+
+
+def _expand_one_tier(tier: Counter, max_expand_per_item: int, seen_stack: set[str]) -> Counter:
+    out = Counter()
+
+    for item_name, item_qty in list(tier.items()):
+        qty = int(item_qty)
+        if qty <= 0:
+            continue
+
+        key = _norm(item_name)
+        if not has_recipe(item_name):
+            out[item_name] += qty
+            continue
+
+        if key in seen_stack:
+            out[item_name] += qty
+            continue
+
+        if qty > max_expand_per_item:
+            expand_qty = max_expand_per_item
+            remain_qty = qty - expand_qty
+        else:
+            expand_qty = qty
+            remain_qty = 0
+
+        if remain_qty:
+            out[item_name] += remain_qty
+
+        seen_stack.add(key)
+        for child_name, child_qty in get_direct_ingredients(item_name):
+            cq = max(int(child_qty), 0)
+            if cq:
+                out[child_name] += expand_qty * cq
+        seen_stack.remove(key)
+
+    for k in [k for k, v in out.items() if not v]:
+        del out[k]
+    return out
+
+
+def get_equivalence_tiers(name: str, max_depth: int = 8, max_expand_per_item: int = 250) -> list[Counter]:
+    if not has_recipe(name):
+        return []
+
+    t0 = Counter()
+    for child_name, child_qty in get_direct_ingredients(name):
+        q = max(int(child_qty), 0)
+        if q:
+            t0[child_name] += q
+
+    tiers: list[Counter] = [t0]
+    seen_stack: set[str] = set()
+
+    for _ in range(max_depth):
+        prev = tiers[-1]
+        if not any(has_recipe(k) for k in prev.keys()):
+            break
+
+        nxt = _expand_one_tier(prev, max_expand_per_item=max_expand_per_item, seen_stack=seen_stack)
+        if nxt == prev:
+            break
+
+        tiers.append(nxt)
+
+    return tiers
 
 
 @dataclass
@@ -21,136 +149,48 @@ class Ingredient:
     total: int
     level: int
     location: str
-    type: str = ''
+    type: str = ""
 
 
 def cascade(search_input=""):
     ingredients, trail = [], []
-    search_input = search_input.lower() or input("Enter the item you want to search for: ").lower()
+    search_input = (search_input or "").lower()
 
-    for recipe in recipes:
-        if recipe[0].lower() == search_input:
-            ingredients = cascade_recursive(recipe[0], 1, 1, ingredients, trail, 0)
+    for recipe in _RECIPES_BY_NAME.values():
+        if (recipe.get("result") or "").lower() == search_input:
+            ingredients = _cascade_recursive(recipe.get("result"), 1, 1, ingredients, trail, 0)
 
-    if __name__ == "__main__":
-        print('\n'.join(
-            [f"{ing.name} x{ing.count} ({ing.total}){' - %s' % ing.location if ing.location else ''}" for ing in
-             ingredients]))
     return ingredients
 
 
-def cascade_recursive(recipe, count, mult, ingredients, trail, level):
+def _cascade_recursive(recipe, count, mult, ingredients, trail, level):
     if recipe is None:
         return ingredients
 
     if recipe in trail:
-        ingredients.append(Ingredient(recipe, count, count * mult, level, ''))
+        ingredients.append(Ingredient(recipe, count, count * mult, level, ""))
         return ingredients
 
-    for item in recipes:
-        if item[0] == recipe:
-            location = next((loc for loc in locations if loc[0] == recipe), None)
-            recipe_type = next((rec["type"] for rec in recipes_data if rec["result"] == recipe), '')
-            ingredients.append(
-                Ingredient(item[0], count, count * mult, level, location[1] if location else '', recipe_type))
+    raw = _RECIPES_BY_NAME.get(_norm(recipe))
+    if raw:
+        loc_list = get_location(recipe)
+        recipe_type = raw.get("type", "")
+        ingredients.append(
+            Ingredient(recipe, count, count * mult, level, ", ".join(loc_list) if loc_list else "", recipe_type)
+        )
 
-            trail.append(item[0])
-            for i in range(1, len(item), 2):
-                cascade_recursive(item[i], int(item[i + 1]), count * mult, ingredients, trail, level + 1)
-            trail.pop()
-            return ingredients
+        trail.append(recipe)
+        for child_name, qty in get_direct_ingredients(recipe):
+            try:
+                q = int(qty)
+            except Exception:
+                q = 0
+            _cascade_recursive(child_name, q, count * mult, ingredients, trail, level + 1)
+        trail.pop()
+        return ingredients
 
-    location = next((loc for loc in locations if loc[0] == recipe), None)
-    if location:
-        ingredients.append(Ingredient(recipe, count, count * mult, level, location[1]))
+    loc_list = get_location(recipe)
+    if loc_list:
+        ingredients.append(Ingredient(recipe, count, count * mult, level, ", ".join(loc_list)))
 
     return ingredients
-
-
-def get_locations_from_sources():
-    def sanitize_item(strings):
-        sanitized = []
-        for string in strings:
-            if " and " in string:
-                strings.extend(string.split(" and "))
-                continue
-            if "; " in string:
-                strings.extend(string.split("; "))
-                continue
-            if "\n" in string:
-                strings.extend(string.split("\n"))
-                continue
-            string = (string.lower().removeprefix("a ").removeprefix("an ").removeprefix("and ").removesuffix(
-                ".").removesuffix(" for showing her the mask").removesuffix(
-                " if you decide to give her the mask").removesuffix(" for showing him the robe").removesuffix(
-                " if you decide to give him the robe").removesuffix(" for repeat").replace(" (", "(").replace(") ",
-                                                                                                              ")"))
-            string = re.sub(r'\([^)]*\)', '', string)
-            string = re.sub(r'\d', '', string)
-            string = string.replace(", ", "").replace("-: ", "")
-            if string:
-                sanitized.append(string.strip())
-        return sanitized
-
-    with open("data/recipes.json", "r") as file:
-        recipes = json.load(file)["recipes"]
-        all_items = [item.lower() for recipe in recipes for item in
-                     [recipe["result"], recipe["item1"], recipe.get("item2", ""), recipe.get("item3", "")] if item]
-
-    with open("data/item_locations.json", "r") as file:
-        items = json.load(file)["locations"]
-        all_items_with_locations = [item["result"].lower() for item in items]
-
-    with open("data/quests.json", "r", encoding="utf-8") as file:
-        quests = [parsers.Quest.from_dict(quest) for quest in json.load(file)["quests"]]
-        rewards = [sanitize_item(quest.reward.split(", ")) for quest in quests]
-
-    with open("data/monsters.json", "r") as file:
-        monsters = [parsers.Monster.from_dict(monster) for monster in json.load(file)["monsters"]]
-        drops = [sanitize_item([monster.drop1, monster.drop2, monster.drop3]) for monster in monsters]
-
-    print("Item locations count: " + str(len(all_items_with_locations)))
-
-    all_items_unique = set(all_items)
-    all_items_modified = []
-
-    items_dont_exist = [item for item in all_items_with_locations if item not in all_items_unique]
-    print("Items that don't exist: " + str(items_dont_exist))
-
-    for item in all_items_unique:
-        modified_item = next((i for i in items if i["result"].lower() == item), {"result": item, "location": []})
-
-        for reward, quest in zip(rewards, quests):
-            if modified_item["result"].lower() in reward and f"quest #{quest.number}" not in modified_item["location"]:
-                modified_item["location"].append(f"quest #{quest.number}")
-                print(f"Added quest #{quest.number} to {modified_item['result']}")
-
-        for drop, monster in zip(drops, monsters):
-            if modified_item["result"].lower() in drop and monster.name.lower() not in modified_item["location"]:
-                if monster.name.lower().startswith("hell ni"):
-                    monster.name = "hell niño"
-                modified_item["location"].append(monster.name.lower())
-                print(f"Added {monster.name} to {modified_item['result']}")
-
-        if modified_item["location"]:
-            location_shops = [location.lower() for location in modified_item["location"] if
-                              location.lower().endswith("shop")]
-            location_quests = [location.lower() for location in modified_item["location"] if
-                               location.lower().startswith("quest")]
-            location_chests = [location.lower() for location in modified_item["location"] if
-                               location.lower().endswith("chest")]
-            location_monsters = [location.lower() for location in modified_item["location"] if
-                                 location.lower() not in location_shops and location.lower() not in location_quests and location.lower() not in location_chests]
-            modified_item["location"] = sorted(location_shops) + sorted(location_quests) + sorted(
-                location_chests) + sorted(location_monsters)
-            all_items_modified.append(modified_item)
-
-    print("Modified item locations count: " + str(len(all_items_modified)))
-    all_items_modified.sort(key=lambda x: x["result"])
-
-    with open("data/item_locations.json", "w") as file:
-        json.dump({"locations": all_items_modified}, file, indent=2)
-
-
-if __name__ == "__main__":
-    cascade()
