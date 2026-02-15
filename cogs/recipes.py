@@ -83,10 +83,54 @@ class Recipes(commands.Cog):
             if loc:
                 locs = [titlecase(x) for x in loc if x]
                 if locs:
-                    # Indent under the ingredient, not a separate field.
-                    # Use a compact single line; split only if it gets too long later by chunker.
                     lines.append(f"  - {', '.join(locs)}")
         return lines
+
+    def _make_equivalence_embed_and_view(self, item_name: str, tier_idx: int, max_depth: int = 8):
+        tiers = cascade_recipes.get_equivalence_tiers(item_name, max_depth=max_depth)
+
+        if not tiers:
+            embed = create_embed(
+                f"No equivalence tiers available for `{item_name}`.",
+                color=discord.Color.red(),
+                image=self.krak_pot_image_url,
+            )
+            return embed, None
+
+        if tier_idx < 0:
+            tier_idx = 0
+        if tier_idx >= len(tiers):
+            tier_idx = len(tiers) - 1
+
+        root = cascade_recipes.get_recipe(item_name)
+        title_base = titlecase(root.name) if root else titlecase(item_name)
+
+        subtitle = (
+            "Equivalent Totals — Tier 0 (direct)"
+            if tier_idx == 0
+            else f"Equivalent Totals — Tier {tier_idx} (expanded {tier_idx} step{'s' if tier_idx != 1 else ''})"
+        )
+
+        color = discord.Color.gold() if (root and getattr(root, "alchemiracle", False)) else discord.Color.green()
+        image = (root.image if root else "") or (self._recipe_image_url(item_name, root.type) if root else None)  # type: ignore
+        embed = create_embed(f"{title_base} — {subtitle}", color=color, image=image)
+
+        lines: list[str] = []
+        for name, total in cascade_recipes.sorted_counter_items(tiers[tier_idx]):
+            lines.append(f"- {titlecase(name)} x{total}")
+
+        if not lines:
+            embed.add_field(name="Totals", value="(empty)", inline=False)
+        else:
+            for i, chunk in enumerate(self._chunk_lines(lines, limit=1024), start=1):
+                embed.add_field(
+                    name="Totals" if i == 1 else "Totals (cont.)",
+                    value=chunk,
+                    inline=False,
+                )
+
+        view = TierEquivalenceView(self, item_name=item_name, tier_idx=tier_idx, max_depth=max_depth, tier_count=len(tiers))
+        return embed, view
 
     def _make_cascade_embed_and_view(self, item_name: str):
         root = cascade_recipes.get_recipe(item_name)
@@ -127,30 +171,9 @@ class Recipes(commands.Cog):
                 )
 
         tiers = cascade_recipes.get_equivalence_tiers(root.name, max_depth=8)
+        has_equivalence = bool(tiers)
 
-        for idx, tier in enumerate(tiers):
-            lines = []
-            for name, total in cascade_recipes.sorted_counter_items(tier):
-                lines.append(f"- {titlecase(name)} x{total}")
-
-            if not lines:
-                continue
-
-            field_name = (
-                "Equivalent Totals — Tier 0 (direct)"
-                if idx == 0
-                else f"Equivalent Totals — Tier {idx} (expanded {idx} step{'s' if idx != 1 else ''})"
-            )
-
-            chunks = self._chunk_lines(lines, limit=1024)
-            for ci, chunk in enumerate(chunks, start=1):
-                embed.add_field(
-                    name=field_name if ci == 1 else f"{field_name} (cont.)",
-                    value=chunk,
-                    inline=False,
-                )
-
-        view = RecipeCascadeView(self, children_for_buttons) if children_for_buttons else None
+        view = RecipeCascadeView(self, root.name, children_for_buttons, include_equivalence=has_equivalence) if (children_for_buttons or has_equivalence) else None
         return embed, view
 
     @discord.slash_command(name="recipe", description="Sends info about a recipe.")
@@ -232,13 +255,59 @@ class Recipes(commands.Cog):
 
 
 class RecipeCascadeView(discord.ui.View):
-    def __init__(self, cog: Recipes, child_names: list[str]):
+    def __init__(self, cog: Recipes, root_name: str, child_names: list[str], include_equivalence: bool):
         super().__init__(timeout=180)
         self.cog = cog
 
+        # Reserve 1 slot for equivalence button if present (Discord max is 25 components).
+        limit = 25
+        if include_equivalence:
+            self.add_item(TierEquivalenceOpenButton(cog, root_name))
+            limit -= 1
+
         uniq = list(OrderedDict.fromkeys(child_names))
-        for name in uniq[:25]:
+        for name in uniq[:limit]:
             self.add_item(RecipeCascadeButton(cog, name))
+
+
+class TierEquivalenceOpenButton(discord.ui.Button):
+    def __init__(self, cog: Recipes, item_name: str):
+        super().__init__(style=discord.ButtonStyle.primary, label="Tier 0 Equivalence")
+        self.cog = cog
+        self.item_name = item_name
+
+    async def callback(self, interaction: discord.Interaction):
+        embed, view = self.cog._make_equivalence_embed_and_view(self.item_name, tier_idx=0, max_depth=8)
+        await interaction.response.send_message(embed=embed, view=view)
+
+
+class TierEquivalenceView(discord.ui.View):
+    def __init__(self, cog: Recipes, item_name: str, tier_idx: int, max_depth: int, tier_count: int):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.item_name = item_name
+        self.tier_idx = tier_idx
+        self.max_depth = max_depth
+        self.tier_count = tier_count
+
+        if self.tier_idx > 0:
+            self.add_item(TierEquivalenceNavButton(cog, item_name, tier_idx - 1, max_depth, label=f"Tier {tier_idx - 1} Equivalence"))
+
+        if self.tier_idx + 1 < self.tier_count:
+            self.add_item(TierEquivalenceNavButton(cog, item_name, tier_idx + 1, max_depth, label=f"Tier {tier_idx + 1} Equivalence"))
+
+
+class TierEquivalenceNavButton(discord.ui.Button):
+    def __init__(self, cog: Recipes, item_name: str, tier_idx: int, max_depth: int, label: str):
+        super().__init__(style=discord.ButtonStyle.secondary, label=label)
+        self.cog = cog
+        self.item_name = item_name
+        self.tier_idx = tier_idx
+        self.max_depth = max_depth
+
+    async def callback(self, interaction: discord.Interaction):
+        embed, view = self.cog._make_equivalence_embed_and_view(self.item_name, tier_idx=self.tier_idx, max_depth=self.max_depth)
+        await interaction.response.send_message(embed=embed, view=view)
 
 
 class RecipeCascadeButton(discord.ui.Button):
