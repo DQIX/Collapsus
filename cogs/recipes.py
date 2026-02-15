@@ -291,17 +291,6 @@ class TierEquivalenceView(discord.ui.View):
         self.min_visible = min_visible
         self.max_visible = max_visible
 
-        if self.tier_idx > self.min_visible:
-            self.add_item(
-                TierEquivalenceNavButton(
-                    cog,
-                    item_name,
-                    tier_idx - 1,
-                    max_depth,
-                    label=f"Tier {tier_idx - 1} Equivalence",
-                    )
-            )
-
         if self.tier_idx < self.max_visible:
             self.add_item(
                 TierEquivalenceNavButton(
