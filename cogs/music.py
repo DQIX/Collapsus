@@ -17,6 +17,8 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.stream_channel = 655390551138631704
+        self.playlist_active = False
+        self.stop_playlist_requested = False
 
     async def get_songs(self, ctx: discord.AutocompleteContext):
         return [song for song in parsers.songs if ctx.value.lower() in song.lower()]
@@ -109,11 +111,11 @@ class Music(commands.Cog):
         if voice_client is None:
             return
 
+        await ctx.followup.send(embed=create_embed(f"Starting `{song.title}` in <#{channel.id}>"))
+
         try:
             await self.play_song(voice_client, song)
-
-            embed = create_embed("Playing `%s` in <#%s>" % (song.title, channel.id))
-            await ctx.followup.send(embed=embed)
+            await ctx.channel.send(embed=create_embed(f"Finished playing `{song.title}` in <#{channel.id}>"))
         finally:
             if voice_client.is_connected():
                 await voice_client.disconnect(force=True)
@@ -137,14 +139,22 @@ class Music(commands.Cog):
         if voice_client is None:
             return
 
-        status_message = await ctx.followup.send(
+        await ctx.followup.send(embed=create_embed("Starting all songs."))
+
+        status_message = await ctx.channel.send(
             embed=create_embed("Playing all songs. Please wait...")
         )
+
+        self.playlist_active = True
+        self.stop_playlist_requested = False
 
         try:
             for song_data in songs:
                 current_vc = ctx.guild.voice_client
                 if current_vc is None or not current_vc.is_connected():
+                    break
+
+                if self.stop_playlist_requested:
                     break
 
                 song = parsers.Song.from_dict(song_data)
@@ -153,10 +163,32 @@ class Music(commands.Cog):
                 await status_message.edit(embed=embed)
 
                 await self.play_song(current_vc, song)
+
+            if self.stop_playlist_requested:
+                await status_message.edit(embed=create_embed("Playlist stopped."))
+            else:
+                await status_message.edit(embed=create_embed("Finished playing all songs."))
         finally:
+            self.playlist_active = False
+            self.stop_playlist_requested = False
+
             current_vc = ctx.guild.voice_client
             if current_vc is not None and current_vc.is_connected():
                 await current_vc.disconnect(force=True)
+
+    @discord.slash_command(name="skip", description="Skips to the next song during songs_all.")
+    async def _skip_song(self, ctx):
+        voice_client = ctx.guild.voice_client
+        if voice_client is None or not voice_client.is_connected() or not voice_client.is_playing():
+            await ctx.respond(embed=create_embed("I'm not currently playing a song."), ephemeral=True)
+            return
+
+        if not self.playlist_active:
+            await ctx.respond(embed=create_embed("Skip can only be used during `/songs_all`.") , ephemeral=True)
+            return
+
+        voice_client.stop()
+        await ctx.respond(embed=create_embed("Skipped to the next song."))
 
     @discord.slash_command(name="stop", description="Stops playing a song.")
     async def _stop_song(self, ctx):
@@ -165,6 +197,9 @@ class Music(commands.Cog):
             embed = create_embed("I'm not playing a song.")
             await ctx.respond(embed=embed, ephemeral=True)
             return
+
+        if self.playlist_active:
+            self.stop_playlist_requested = True
 
         if voice_client.is_playing():
             voice_client.stop()
@@ -185,6 +220,10 @@ class Music(commands.Cog):
 
         non_bot_members = [m for m in voice_client.channel.members if not m.bot]
         if not non_bot_members:
+            if self.playlist_active:
+                self.stop_playlist_requested = True
+
             if voice_client.is_playing():
                 voice_client.stop()
+
             await voice_client.disconnect(force=True)
