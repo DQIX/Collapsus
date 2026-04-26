@@ -55,7 +55,7 @@
         },
         {
             "name": "LegacyLocations",
-            "author": 263694336040894465,
+            "author": 298978032541237248,
             "content": "```yml\nDragonlord - Grotto Greygnarl Drop\nMalroth    - Lonely Coast cliff cave; DLC Quest 151\nBaramos    - Cringle Coast island cave; Normal Quest 62\nZoma       - Cringle Coast island field; DLC Quest 167\nPsaro      - Lv16+ Dragonlord Drop\nEstark     - Cringle Coast island house; DLC Quest 152\nNimzo      - Lv16+ Psaro Drop\nMurdaw     - Lv16+ Baramos Drop\nMortamor   - Heights of Loneliness cave entrance; DLC Quest 158\nNokturnus  - Lonely Coast cliff cave; DLC Quest 184\nOrgodemir  - Urdus Marshland cliff well; DLC Quest 176\nDhoulmagus - Lv16+ Murdaw Drop\nRhapthorne - Wyrmtail cliff cave; DLC Quest 179```",
             "image": "",
             "aliases": []
@@ -70,7 +70,7 @@
         {
             "name": "LegacyEquipment",
             "author": 298978032541237248,
-            "content": "```yml\nAbbreviations:\n Alefgard  - Ale\n Midenhall - M\n Aliahan   - Ali\n Zenithian - Z\n Gothan    - G\n Somnia    - S\n Estard    - E\n Trodain   - T\n\n\nEquipment Pieces:\n Head:\n  Ale Helm\n  M   Helm\n  Ali Headpiece\n  Z   Helm\n  G   Turban\n  S   Hair\n  E   Hood\n  T   Bandana\n\n Torso:\n  Ale Armour\n  M   Garb\n  Ali Clothes\n  Z   Clothes/Leotard\n  G   Robe\n  S   Clothes\n  E   Clothes\n  T   Togs\n\n Arms:\n  Ale Gloves\n  M   Gloves\n  Ali Gloves\n  Z   Gauntlet\n  G   Wristbands\n  S   Gloves\n\n Legs:\n  Ale Trousers\n  M   Trousers\n  Ali Trousers\n  Z   Trousers/Leggings\n  S   Shorts\n  E   Trousers\n  T   Trousers\n\n Feet:\n  Ale Boots\n  M   Boots\n  Ali Boots\n  Z   Boots\n  G   Gumboots\n  S   Boots\n  E   Shoes\n  T - ers\n```",
+            "content": "```yml\nAbbreviations:\n Alefgard  - Ale\n Midenhall - M\n Aliahan   - Ali\n Zenithian - Z\n Gothan    - G\n Somnia    - S\n Estard    - E\n Trodain   - T\n\n\nEquipment Pieces:\n Head:\n  Ale Helm\n  M   Helm\n  Ali Headpiece\n  Z   Helm\n  G   Turban\n  S   Hair\n  E   Hood\n  T   Bandana\n\n Torso:\n  Ale Armour\n  M   Garb\n  Ali Clothes\n  Z   Clothes/Leotard\n  G   Robe\n  S   Clothes\n  E   Clothes\n  T   Togs\n\n Arms:\n  Ale Gloves\n  M   Gloves\n  Ali Gloves\n  Z   Gauntlet\n  G   Wristbands\n  S   Gloves\n\n Legs:\n  Ale Trousers\n  M   Trousers\n  Ali Trousers\n  Z   Trousers/Leggings\n  S   Shorts\n  E   Trousers\n  T   Trousers\n\n Feet:\n  Ale Boots\n  M   Boots\n  Ali Boots\n  Z   Boots\n  G   Gumboots\n  S   Boots\n  E   Shoes\n  T - ers```",
             "image": "",
             "aliases": []
         }
