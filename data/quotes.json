@@ -66,6 +66,15 @@
             "content": "Story\n\n||1. Hexagoon - N/A\n2. Wight Knight - Fire & Wind\n3. Morag - Wind, Earth & Light\n4. Ragin' Contagion - Fire & Light\n5. Master of Nu'un - Earth & Light\n6. Lleviathan - Blast\n7. Garth Goyle - Wind\n8. Tyrantula - Blast, Dark & Light\n9. Grand Lizzier - Dark & Light\n10. Larstastnaras - Light\n11. Dreadmaster - N/A\n12. Gadrongo - Wind\n13. Greygnarl - Ice & Dark\n14. Goreham-Hogg - Light\n15. Hootingham-Gore - Light\n16. Goresby-Purrvis - Wind, Blast & Dark\n17. King Godwyn - Light\n18. Barbarus - Light\n19. Corvus - Light||\n\nDLC\n\n||20. Yore - Wind\n21. Rover - Fire & Light\n22. King Godfrey - Wind & Light\n23. Tyrannosaura Wrecks - Blast & Light\n24. Nodoph - Dark & Light||",
             "image": "",
             "aliases": []
+        },
+        {
+            "name": "LegacyEquipmentM",
+            "author": 298978032541237248,
+            "content": "```yaml Abbreviations:  Alefgard  - Ale  Midenhall - M  Aliahan   - Ali  Zenithian - Z  Gothan    - G  Somnia    - S  Estard    - E  Trodain   - T  Equipment Pieces:  Head:      Ale Helm   M   Helm   Ali Headpiece   Z   Helm   G   Turban   S   Hair   E   Hood   T   Bandana   Torso:   Ale Armour   M   Garb   Ali Clothes   Z   Clothes/Leotard   G   Robe   S   Clothes   E   Clothes   T   Togs   Arms:   Ale Gloves   M   Gloves   Ali Gloves   Z   Gauntlet   G   Wristbands   S   Gloves      Legs:   Ale Trousers   M   Trousers   Ali Trousers   Z   Trousers/Leggings   S   Shorts   E   Trousers   T   Trousers   Feet:   Ale Boots   M   Boots   Ali Boots   Z   Boots   G   Gumboots   S   Boots   E   Shoes   T - ers  ```",
+            "image": "",
+            "aliases": [
+                "LEquipM"
+            ]
         }
     ]
 }
