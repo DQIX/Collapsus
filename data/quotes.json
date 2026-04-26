@@ -68,13 +68,11 @@
             "aliases": []
         },
         {
-            "name": "LegacyEquipmentM",
+            "name": "LegacyEquipment",
             "author": 298978032541237248,
-            "content": "```yaml Abbreviations:  Alefgard  - Ale  Midenhall - M  Aliahan   - Ali  Zenithian - Z  Gothan    - G  Somnia    - S  Estard    - E  Trodain   - T  Equipment Pieces:  Head:      Ale Helm   M   Helm   Ali Headpiece   Z   Helm   G   Turban   S   Hair   E   Hood   T   Bandana   Torso:   Ale Armour   M   Garb   Ali Clothes   Z   Clothes/Leotard   G   Robe   S   Clothes   E   Clothes   T   Togs   Arms:   Ale Gloves   M   Gloves   Ali Gloves   Z   Gauntlet   G   Wristbands   S   Gloves      Legs:   Ale Trousers   M   Trousers   Ali Trousers   Z   Trousers/Leggings   S   Shorts   E   Trousers   T   Trousers   Feet:   Ale Boots   M   Boots   Ali Boots   Z   Boots   G   Gumboots   S   Boots   E   Shoes   T - ers  ```",
+            "content": "```yml\nAbbreviations:\n Alefgard  - Ale\n Midenhall - M\n Aliahan   - Ali\n Zenithian - Z\n Gothan    - G\n Somnia    - S\n Estard    - E\n Trodain   - T\n\n\nEquipment Pieces:\n Head:\n  Ale Helm\n  M   Helm\n  Ali Headpiece\n  Z   Helm\n  G   Turban\n  S   Hair\n  E   Hood\n  T   Bandana\n\n Torso:\n  Ale Armour\n  M   Garb\n  Ali Clothes\n  Z   Clothes/Leotard\n  G   Robe\n  S   Clothes\n  E   Clothes\n  T   Togs\n\n Arms:\n  Ale Gloves\n  M   Gloves\n  Ali Gloves\n  Z   Gauntlet\n  G   Wristbands\n  S   Gloves\n\n Legs:\n  Ale Trousers\n  M   Trousers\n  Ali Trousers\n  Z   Trousers/Leggings\n  S   Shorts\n  E   Trousers\n  T   Trousers\n\n Feet:\n  Ale Boots\n  M   Boots\n  Ali Boots\n  Z   Boots\n  G   Gumboots\n  S   Boots\n  E   Shoes\n  T - ers\n```",
             "image": "",
-            "aliases": [
-                "LEquipM"
-            ]
+            "aliases": []
         }
     ]
 }
