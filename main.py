@@ -59,6 +59,7 @@ A bot created by <@{dev_id}> for The Quester's Rest (<{server_invite_url + serve
 </character:984820203483459635> - *Generate a random character*
 </gg:1038001809660334122> - *Get grotto info (location required) - <#{grotto_bot_commands_channel}> only*
 </grotto:1038001809660334121> - *Search for a grotto - <#{grotto_bot_commands_channel}> only*
+</grotto_seed:1519476166929420308> - *Get a grotto directly by seed and rank - <#{grotto_bot_commands_channel}> only*
 </monster:980895182859935765> - *Get monster info*
 </quest:977175507558875167> - *Get quest info*
 </recipe:977175507558875168> - *Get an item's recipe*

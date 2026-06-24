@@ -19,6 +19,12 @@ from parsers import grotto_prefixes, grotto_environments, grotto_suffixes, trans
     create_grotto, grotto_keys, grotto_chest_ranks, Translation, translation_languages_simple
 from utils import create_embed, dev_tag, create_paginator, create_collage
 
+GROTTO_RANK_CHOICES = [
+    discord.OptionChoice(name=f"{rank} ({code})", value=code)
+    for rank, code in parsers.grotto_ranks.items()
+]
+GROTTO_RANK_CODE_TO_NUMBER = {code: rank for rank, code in parsers.grotto_ranks.items()}
+
 
 def setup(bot):
     bot.add_cog(Grottos(bot))
@@ -84,6 +90,46 @@ class Grottos(commands.Cog):
                  level: Option(int, "Level (Ex. 1)", required=True),
                  location: Option(str, "Location (Ex. 05)", required=True)):
         await self.grotto_command(ctx, material, environment, suffix, level, location)
+
+    @discord.slash_command(description="Get a Grotto by Seed and Rank")
+    async def grotto_seed(self, ctx,
+                          seed: Option(str, "Seed (Ex. 1341)", required=True),
+                          rank: Option(str, "Rank (Ex. 11 (C9))", choices=GROTTO_RANK_CHOICES, required=True)):
+        if not ctx.response.is_done():
+            await ctx.defer()
+
+        normalized_seed = self.normalize_grotto_seed(seed)
+        if normalized_seed is None:
+            embed = create_embed("Invalid seed. Please provide a 1-4 digit hexadecimal seed (Ex. 1341 or 0D90).")
+            await ctx.followup.send(embed=embed)
+            return
+
+        rank_number = GROTTO_RANK_CODE_TO_NUMBER.get(rank)
+        if rank_number is None:
+            embed = create_embed("Invalid rank. Please select a valid rank choice.")
+            await ctx.followup.send(embed=embed)
+            return
+
+        embed, files, grotto = await self.grotto_seed_func(normalized_seed, rank_number)
+
+        file = None
+        if len(files) > 0:
+            file_name = "collages/collage0.png"
+            create_collage([entry["file"] for entry in files], file_name)
+            with open(file_name, "rb") as fp:
+                data = io.BytesIO(fp.read())
+            file = discord.File(data, file_name.removeprefix("collages/"))
+            embed.set_image(url="attachment://%s" % file_name.removeprefix("collages/"))
+
+        premium = ctx.author.get_role(self.contributor_role) is not None
+        view = SaveGrottoView(grotto) if premium and grotto is not None else None
+
+        if file is not None:
+            await ctx.followup.send(embed=embed, file=file, view=view)
+        elif view is not None:
+            await ctx.followup.send(embed=embed, view=view)
+        else:
+            await ctx.followup.send(embed=embed)
 
     @discord.slash_command(description="Search for a Grotto Using Abbreviations (Location Required)")
     async def gs(self, ctx, material: Option(str, "Material Abbreviation (Ex. G)", required=True),
@@ -456,6 +502,150 @@ class Grottos(commands.Cog):
                 else:
                     await ctx.followup.send(embed=embed)
 
+    @staticmethod
+    def normalize_grotto_seed(seed):
+        cleaned = seed.strip().upper()
+        if not re.fullmatch(r"[0-9A-F]{1,4}", cleaned):
+            return None
+        return cleaned.zfill(4)
+
+    def create_grotto_result(self, parsed, url=None):
+        special = is_special(parsed)
+        color = discord.Color.gold() if special else discord.Color.green()
+        embed = create_embed(None, color=color)
+
+        if special:
+            parsed = parsed[1:]
+
+        zipped = zip(range(len(parsed)), grotto_keys, parsed)
+
+        seed = ""
+        rank = ""
+        type = ""
+        floors = ""
+        boss = ""
+        monster_rank = ""
+
+        chests_value = ""
+        locations_values = []
+
+        description = '''
+**Seed:** | **Rank:**
+
+**Type:** | **Floors:**
+
+**Boss:** | **Monster Rank:**
+    '''
+
+        files = []
+
+        for i, key, value in zipped:
+            if key == "Name":
+                if special:
+                    value = ":star: %s :star:" % value
+                embed.title = "%s\n[Click For Full Info]" % value
+            else:
+                if key == "Seed":
+                    value = str(value).zfill(4)
+                    seed = value
+                if key == "Rank":
+                    value = str(value).replace(" / ", "/")
+                    rank = value
+                if key == "Type":
+                    type = value
+                if key == "Floors":
+                    floors = value
+                if key == "Boss":
+                    boss = value
+                if key == "Monster Rank":
+                    pattern = r'\((.*?)\)'
+                    matches = re.findall(pattern, value)
+                    value = '-'.join(matches)
+                    monster_rank = value
+                if key == "Chests":
+                    values = [str(x) for x in parsed[i:i + 10]]
+                    chests = list(zip(grotto_chest_ranks, values))
+                    value = ", ".join([': '.join(x) for x in chests if x[1] != "0"])
+                    chests_value = value
+                if key == "Locations":
+                    values = [str(x).zfill(2) for x in parsed[i + 9:]]
+                    for location in values:
+                        files.append({"id": 0, "file": "grotto_images/%s.png" % location})
+                    locations_values = values
+                description = description.replace("**%s:**" % key, "**%s:** %s" % (key, value))
+
+        if chests_value != "":
+            description += "\n**Chests**\n%s\n" % chests_value
+        if len(locations_values) > 0:
+            description += "\n**Locations**"
+
+            with open("data/locations.json", "r") as f:
+                locations = json.load(f)["locations"]
+                for location in locations_values:
+                    description += "\n**%s**: ||%s||" % (location, locations[location])
+
+        embed.description = description
+        if url is None:
+            url = self.grotto_details_url + parsers.grotto_ranks[int(rank.split()[0])] + seed
+        embed.url = url
+
+        name = embed.title.replace(":star: ", "").replace(" :star:", "").split("\n")[0]
+        chests = chests_value.replace("*", "").split(", ")
+        if len(chests) > 0 and chests[0] != "":
+            chests = {x.split(": ")[0]: x.split(": ")[1] for x in chests}
+        grotto = parsers.Grotto(name=name, url=embed.url, special=int(special), seed=seed, rank=rank,
+                                type=type, floors=floors, boss=boss, monster_rank=monster_rank,
+                                chests=str(chests), locations=str(locations_values))
+        return embed, files, grotto
+
+    async def grotto_seed_func(self, seed, rank_number):
+        map_code = parsers.grotto_ranks[rank_number] + seed
+        url = self.grotto_details_url + map_code
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    text = await response.text()
+        except ConnectionTimeoutError:
+            err = create_embed("Connection timeout to host", description=url)
+            return err, [], None
+        except Exception:
+            err = create_embed("Error contacting grotto database.")
+            return err, [], None
+
+        seed_match = re.search(r"<strong>Seed:</strong>\s*([0-9A-F]{4})", text)
+        rank_match = re.search(r"<strong>Rank:</strong>\s*([^<]+)<br", text)
+        name_match = re.search(r"<strong>Name:</strong>\s*([^<]+)<br", text)
+        boss_match = re.search(r"<strong>Boss:</strong>\s*([^<]+)<br", text)
+        type_floors_match = re.search(
+            r"<strong>Type:</strong>\s*([^<&]+)\s*&nbsp;\s*<strong>Floors:</strong>\s*([^<]+)<br",
+            text,
+        )
+        monster_rank_match = re.search(r"<strong>Monster rank:</strong>\s*([^<]+)<br", text)
+
+        if None in (seed_match, rank_match, name_match, boss_match, type_floors_match, monster_rank_match):
+            return create_embed("No grotto found. Please check seed and rank and try again."), [], None
+
+        chest_values = []
+        for chest_rank in "SABCDEFGHI":
+            chest_match = re.search(rf"<strong>{chest_rank}:</strong>\s*(\d+)", text)
+            chest_values.append(chest_match.group(1) if chest_match is not None else "0")
+
+        locations = re.findall(r"<div class=\"minimap\"[^>]*>\s*([0-9A-F]{2})\s*</div>", text, flags=re.I)
+
+        parsed = (
+            seed_match.group(1),
+            rank_match.group(1).replace("&nbsp;", " ").strip(),
+            name_match.group(1).strip(),
+            boss_match.group(1).strip(),
+            type_floors_match.group(1).strip(),
+            type_floors_match.group(2).strip(),
+            monster_rank_match.group(1).replace("&nbsp;", " ").strip(),
+            *chest_values,
+            *[location.upper() for location in locations],
+        )
+        return self.create_grotto_result(parsed, url)
+
     async def grotto_func(self, material, environment, suffix, level, location):
         async with aiohttp.ClientSession() as session:
             environment_name = str(grotto_environments["english"].index(
@@ -492,88 +682,11 @@ class Grottos(commands.Cog):
             grottos = []
 
             for parsed in create_grotto(grottos_res):
-                special = is_special(parsed)
-                color = discord.Color.gold() if special else discord.Color.green()
-                embed = create_embed(None, color=color)
-
-                if special:
-                    parsed = parsed[1:]
-
-                zipped = zip(range(len(parsed)), grotto_keys, parsed)
-
-                seed = ""
-                rank = ""
-                type = ""
-                floors = ""
-                boss = ""
-                monster_rank = ""
-
-                chests_value = ""
-                locations_values = []
-
-                description = '''
-**Seed:** | **Rank:**
-
-**Type:** | **Floors:**
-
-**Boss:** | **Monster Rank:**
-    '''
-                for i, key, value in zipped:
-                    if key == "Name":
-                        if special:
-                            value = ":star: %s :star:" % value
-                        embed.title = "%s\n[Click For Full Info]" % value
-                    else:
-                        if key == "Seed":
-                            value = str(value).zfill(4)
-                            seed = value
-                        if key == "Rank":
-                            value = str(value).replace(" / ", "/")
-                            rank = value
-                        if key == "Type":
-                            type = value
-                        if key == "Floors":
-                            floors = value
-                        if key == "Boss":
-                            boss = value
-                        if key == "Monster Rank":
-                            pattern = r'\((.*?)\)'
-                            matches = re.findall(pattern, value)
-                            value = '-'.join(matches)
-                            monster_rank = value
-                        if key == "Chests":
-                            values = [str(x) for x in parsed[i:i + 10]]
-                            chests = list(zip(grotto_chest_ranks, values))
-                            value = ", ".join([': '.join(x) for x in chests if x[1] != "0"])
-                            chests_value = value
-                        if key == "Locations":
-                            values = [str(x).zfill(2) for x in parsed[i + 9:]]
-                            for v in values:
-                                files.append({"id": len(embeds), "file": "grotto_images/%s.png" % v})
-                            locations_values = values
-                        description = description.replace("**%s:**" % key, "**%s:** %s" % (key, value))
-
-                if chests_value != "":
-                    description += "\n**Chests**\n%s\n" % chests_value
-                if len(locations_values) > 0:
-                    description += "\n**Locations**"
-
-                    with open("data/locations.json", "r") as f:
-                        locations = json.load(f)["locations"]
-                        for location in locations_values:
-                            description += "\n**%s**: ||%s||" % (location, locations[location])
-                embed.description = description
-                embed.url = self.grotto_details_url + parsers.grotto_ranks[int(rank.split()[0])] + seed
+                embed, grotto_files, grotto = self.create_grotto_result(parsed)
                 embeds.append(embed)
-
-                name = embed.title.replace(":star: ", "").replace(" :star:", "").split("\n")[0]
-                locations = locations_values
-                chests = chests_value.replace("*", "").split(", ")
-                if len(chests) > 0 and chests[0] != "":
-                    chests = {x.split(": ")[0]: x.split(": ")[1] for x in chests}
-                grotto = parsers.Grotto(name=name, url=embed.url, special=int(special), seed=seed, rank=rank,
-                                        type=type, floors=floors, boss=boss, monster_rank=monster_rank,
-                                        chests=str(chests), locations=str(locations))
+                for file in grotto_files:
+                    file["id"] = len(embeds) - 1
+                    files.append(file)
                 grottos.append(grotto)
 
             return embeds, files, grottos
