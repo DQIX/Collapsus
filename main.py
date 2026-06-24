@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import unicodedata
 
 import discord
 import dotenv
@@ -9,7 +10,7 @@ from titlecase import titlecase
 
 import grotto_db
 import parsers
-from utils import create_embed, clean_text, dev_tag
+from utils import create_embed, dev_tag
 
 dotenv.load_dotenv()
 token = os.getenv("TOKEN")
@@ -30,6 +31,97 @@ server_invite_url = "https://discord.gg/"
 server_invite_code = ""
 
 character_image_url = "https://www.woodus.com/den/games/dq9ds/characreate/index.php?"
+
+translation_data_dir = "data/translations"
+
+
+def _load_general_translations():
+    translations = []
+
+    for file in os.listdir(translation_data_dir):
+        if not file.endswith(".json"):
+            continue
+
+        with open(os.path.join(translation_data_dir, file), "r", encoding="utf-8") as fp:
+            translations.extend(json.load(fp)["translations"])
+
+    return translations
+
+
+def _build_translation_autocomplete_values(translations):
+    values_by_language = {language: [] for language in parsers.translation_languages_simple}
+    seen_by_language = {language: set() for language in parsers.translation_languages_simple}
+    all_values = []
+    all_seen = set()
+
+    for translation in translations:
+        for language in parsers.translation_languages_simple:
+            value = translation.get(language, "")
+            if value == "":
+                continue
+
+            if value not in seen_by_language[language]:
+                values_by_language[language].append(value)
+                seen_by_language[language].add(value)
+
+            if value not in all_seen:
+                all_values.append(value)
+                all_seen.add(value)
+
+        alias = translation.get("alias", "")
+        if alias != "":
+            if alias not in seen_by_language["english"]:
+                values_by_language["english"].append(alias)
+                seen_by_language["english"].add(alias)
+
+            if alias not in all_seen:
+                all_values.append(alias)
+                all_seen.add(alias)
+
+    return values_by_language, all_values
+
+
+def _normalize_translation_language(language):
+    if language is None:
+        return None
+
+    if language in parsers.translation_languages_simple:
+        return language
+
+    try:
+        return parsers.translation_languages_simple[parsers.translation_languages.index(language)]
+    except ValueError:
+        return None
+
+
+def _normalize_translation_text(text):
+    if text is None:
+        return ""
+
+    normalized = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(
+        char for char in normalized
+        if not unicodedata.combining(char) and char not in {" ", "'", "’", ".", "-"}
+    )
+
+
+async def get_translations(ctx: discord.AutocompleteContext):
+    language_input = _normalize_translation_language((ctx.options or {}).get("language_input"))
+    values = all_translation_values if language_input is None else translation_values_by_language[language_input]
+    query = _normalize_translation_text(ctx.value or "")
+
+    results = []
+    for value in values:
+        if query in _normalize_translation_text(value):
+            results.append(value)
+        if len(results) == 25:
+            break
+
+    return results
+
+
+general_translations = _load_general_translations()
+translation_values_by_language, all_translation_values = _build_translation_autocomplete_values(general_translations)
 
 
 @bot.event
@@ -118,27 +210,27 @@ async def _quest(ctx, quest_number: Option(int, "Quest Number (1-184)", required
 
 
 @bot.command(name="translate", description="Translate a word or phrase to a different language.")
-async def _translate(ctx, phrase: Option(str, "Word or Phrase (Ex. Copper Sword)", required=True),
+async def _translate(ctx,
                      language_input: Option(str, "Input Language (Ex. English)", choices=parsers.translation_languages,
                                             required=True),
+                     phrase: Option(str, "Word or Phrase (Ex. Copper Sword)", autocomplete=get_translations,
+                                    required=True),
                      language_output: Option(str, "Output Language (Ex. Japanese)",
                                              choices=parsers.translation_languages, required=False)):
-    data = {"translations": []}
+    language_input_simple = _normalize_translation_language(language_input)
+    language_output_simple = _normalize_translation_language(language_output)
+    normalized_phrase = _normalize_translation_text(phrase)
 
-    for file in os.listdir("data/translations"):
-        if file == "grotto.json":
-            continue
-        with open("data/translations/" + file, "r", encoding="utf-8") as fp:
-            data["translations"] += json.load(fp)["translations"]
-
-    translations = data["translations"]
-
-    index = next(filter(lambda t: clean_text(
-        t.get(parsers.translation_languages_simple[parsers.translation_languages.index(language_input)],
-              "").lower()) == clean_text(phrase.lower()), translations), None)
-    if index is None:
+    index = next(
+        filter(lambda t: _normalize_translation_text(t.get(language_input_simple, "")) == normalized_phrase,
+               general_translations),
+        None
+    )
+    if index is None and language_input_simple == "english":
         index = next(
-            filter(lambda t: clean_text(t.get("alias", "").lower()) == clean_text(phrase.lower()), translations), None)
+            filter(lambda t: _normalize_translation_text(t.get("alias", "")) == normalized_phrase, general_translations),
+            None
+        )
 
     if index is None:
         embed = create_embed("No word or phrase found matching `%s`. Please check phrase and try again." % phrase,
@@ -149,11 +241,13 @@ async def _translate(ctx, phrase: Option(str, "Word or Phrase (Ex. Copper Sword)
     all_languages = [translation.english, translation.japanese, translation.spanish, translation.french,
                      translation.german, translation.italian]
 
-    title = "Translation of: %s" % titlecase(all_languages[parsers.translation_languages.index(language_input)])
+    title = "Translation of: %s" % titlecase(
+        all_languages[parsers.translation_languages_simple.index(language_input_simple)]
+    )
     color = discord.Color.green()
     embed = create_embed(title, color=color, error="Any errors? Want to contribute data? Please speak to %s" % dev_tag)
     if language_output is not None:
-        value = titlecase(all_languages[parsers.translation_languages.index(language_output)])
+        value = titlecase(all_languages[parsers.translation_languages_simple.index(language_output_simple)])
         if value != "":
             embed.add_field(name=language_output, value=value, inline=False)
         else:
