@@ -57,8 +57,7 @@ class Quotes(commands.Cog):
             await ctx.respond(embed=embed)
 
     @discord.slash_command(name="add_quote", description="Adds a quote.", guild_ids=[guild_id])
-    async def _add_quote(self, ctx, quote_name: discord.Option(str, "Quote Name", required=True,
-                                                               autocomplete=get_quotes),
+    async def _add_quote(self, ctx, quote_name: discord.Option(str, "Quote Name", required=True),
                          quote_content: discord.Option(str, "Quote Content", required=True),
                          quote_image: discord.Option(discord.Attachment, "Quote Image", required=False),
                          quote_aliases: discord.Option(str, "Quote Aliases", required=False)):
