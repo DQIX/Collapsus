@@ -27,6 +27,8 @@ class Quotes(commands.Cog):
             if ctx.value.lower() in quote.name.lower() or any(
                     ctx.value.lower() in alias.lower() for alias in quote.aliases):
                 results.append(titlecase(quote.name))
+            if len(results) == 25:
+                break
         return results
 
     @discord.slash_command(name="quote", description="Sends a quote.")
@@ -55,7 +57,8 @@ class Quotes(commands.Cog):
             await ctx.respond(embed=embed)
 
     @discord.slash_command(name="add_quote", description="Adds a quote.", guild_ids=[guild_id])
-    async def _add_quote(self, ctx, quote_name: discord.Option(str, "Quote Name", required=True),
+    async def _add_quote(self, ctx, quote_name: discord.Option(str, "Quote Name", required=True,
+                                                               autocomplete=get_quotes),
                          quote_content: discord.Option(str, "Quote Content", required=True),
                          quote_image: discord.Option(discord.Attachment, "Quote Image", required=False),
                          quote_aliases: discord.Option(str, "Quote Aliases", required=False)):

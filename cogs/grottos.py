@@ -24,6 +24,8 @@ GROTTO_RANK_CHOICES = [
     for rank, code in parsers.grotto_ranks.items()
 ]
 GROTTO_RANK_CODE_TO_NUMBER = {code: rank for rank, code in parsers.grotto_ranks.items()}
+GROTTO_LOCATION_CODES = [f"{location:02X}" for location in range(1, 151)]
+GROTTO_LEVEL_SUGGESTIONS = [str(level) for level in range(1, 100)]
 
 
 def setup(bot):
@@ -72,14 +74,84 @@ class Grottos(commands.Cog):
 
     grotto_translate = SlashCommandGroup("grotto_translate", "Grotto Translation Commands")
 
+    async def get_grotto_locations(self, ctx: discord.AutocompleteContext):
+        query = (ctx.value or "").lower()
+        results = []
+
+        for code in GROTTO_LOCATION_CODES:
+            if query in code.lower():
+                results.append(code)
+            if len(results) == 25:
+                break
+
+        return results
+
+    async def get_grotto_levels(self, ctx: discord.AutocompleteContext):
+        query = (ctx.value or "").lower()
+        results = []
+
+        for level in GROTTO_LEVEL_SUGGESTIONS:
+            if query in level:
+                results.append(level)
+            if len(results) == 25:
+                break
+
+        return results
+
+    async def get_saved_grotto_notes(self, ctx: discord.AutocompleteContext):
+        author = getattr(ctx, "author", None)
+        if author is None:
+            interaction = getattr(ctx, "interaction", None)
+            author = interaction.user if interaction is not None else None
+        if author is None:
+            return []
+
+        query = (ctx.value or "").lower()
+        results = []
+        seen = set()
+
+        for grotto in grotto_db.get_grottos(author.id):
+            if grotto.notes in seen:
+                continue
+            if query in grotto.notes.lower() or query in grotto.name.lower():
+                results.append(grotto.notes)
+                seen.add(grotto.notes)
+            if len(results) == 25:
+                break
+
+        return results
+
+    @staticmethod
+    def extract_grotto_location_code(location):
+        if location is None:
+            return None
+        return location.strip().upper()
+
+    @staticmethod
+    def parse_grotto_level(level):
+        if level is None:
+            return None
+        if isinstance(level, int):
+            return level
+
+        cleaned = str(level).strip()
+        return int(cleaned) if cleaned.isdecimal() else None
+
     @discord.slash_command(description="Search for a Grotto")
     async def grotto(self, ctx,
                      material: Option(str, "Material (Ex. Granite)", choices=grotto_prefixes["english"], required=True),
                      environment: Option(str, "Environment (Ex. Tunnel)", choices=grotto_environments["english"],
                                          required=True),
                      suffix: Option(str, "Suffix (Ex. of Woe)", choices=grotto_suffixes["english"], required=True),
-                     level: Option(int, required=True), location: Option(str, required=False)):
-        await self.grotto_command(ctx, material, environment, suffix, level, location)
+                     level: Option(str, "Level (Ex. 1)", autocomplete=get_grotto_levels, required=True),
+                     location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations,
+                                      required=False) = None):
+        normalized_level = self.parse_grotto_level(level)
+        if normalized_level is None:
+            embed = create_embed("Invalid level. Please provide a numeric grotto level (Ex. 1).")
+            await ctx.respond(embed=embed)
+            return
+        await self.grotto_command(ctx, material, environment, suffix, normalized_level, location)
 
     @discord.slash_command(description="Search for a Grotto (Location Required)")
     async def gg(self, ctx,
@@ -87,14 +159,21 @@ class Grottos(commands.Cog):
                  environment: Option(str, "Environment (Ex. Tunnel)", choices=grotto_environments["english"],
                                      required=True),
                  suffix: Option(str, "Suffix (Ex. of Woe)", choices=grotto_suffixes["english"], required=True),
-                 level: Option(int, "Level (Ex. 1)", required=True),
-                 location: Option(str, "Location (Ex. 05)", required=True)):
-        await self.grotto_command(ctx, material, environment, suffix, level, location)
+                 level: Option(str, "Level (Ex. 1)", autocomplete=get_grotto_levels, required=True),
+                 location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations, required=True)):
+        normalized_level = self.parse_grotto_level(level)
+        if normalized_level is None:
+            embed = create_embed("Invalid level. Please provide a numeric grotto level (Ex. 1).")
+            await ctx.respond(embed=embed)
+            return
+        await self.grotto_command(ctx, material, environment, suffix, normalized_level, location)
 
     @discord.slash_command(description="Get a Grotto by Seed and Rank")
     async def grotto_seed(self, ctx,
                           seed: Option(str, "Seed (Ex. 1341)", required=True),
-                          rank: Option(str, "Rank (Ex. 11 (C9))", choices=GROTTO_RANK_CHOICES, required=True)):
+                          rank: Option(str, "Rank (Ex. 11 (C9))", choices=GROTTO_RANK_CHOICES, required=True),
+                          location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations,
+                                           required=False) = None):
         if not ctx.response.is_done():
             await ctx.defer()
 
@@ -110,7 +189,8 @@ class Grottos(commands.Cog):
             await ctx.followup.send(embed=embed)
             return
 
-        embed, files, grotto = await self.grotto_seed_func(normalized_seed, rank_number)
+        location_code = self.extract_grotto_location_code(location)
+        embed, files, grotto = await self.grotto_seed_func(normalized_seed, rank_number, location_code)
 
         file = None
         if len(files) > 0:
@@ -135,10 +215,16 @@ class Grottos(commands.Cog):
     async def gs(self, ctx, material: Option(str, "Material Abbreviation (Ex. G)", required=True),
                  environment: Option(str, "Environment Abbreviation (Ex. T)", required=True),
                  suffix: Option(str, "Suffix Abbreviation (Ex. of W)", required=True),
-                 level: Option(int, "Level (Ex. 1)", required=True),
-                 location: Option(str, "Location (Ex. 05)", required=True)):
+                 level: Option(str, "Level (Ex. 1)", autocomplete=get_grotto_levels, required=True),
+                 location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations, required=True)):
         if not ctx.response.is_done():
             await ctx.defer()
+
+        normalized_level = self.parse_grotto_level(level)
+        if normalized_level is None:
+            embed = create_embed("Invalid level. Please provide a numeric grotto level (Ex. 1).")
+            await ctx.followup.send(embed=embed)
+            return
 
         materials = [mat for mat in grotto_prefixes["english"] if mat.lower().startswith(material.lower())]
         environments = [env for env in grotto_environments["english"] if env.lower().startswith(environment.lower())]
@@ -152,7 +238,7 @@ class Grottos(commands.Cog):
         for mat in materials:
             for env in environments:
                 for suff in suffixes:
-                    embeds, files, grottos = await self.grotto_command(ctx, mat, env, suff, level, location,
+                    embeds, files, grottos = await self.grotto_command(ctx, mat, env, suff, normalized_level, location,
                                                                        abbreviations=True)
                     if embeds is not None:
                         all_embeds.extend(embeds)
@@ -230,7 +316,8 @@ class Grottos(commands.Cog):
         await paginator.respond(ctx.interaction, ephemeral=True)
 
     @discord.slash_command(description="Get a saved personal grotto", guild_ids=[guild_id])
-    async def get_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", required=True),
+    async def get_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
+                                                        required=True),
                          private: Option(bool, "Keep Private", required=False) = False):
         if ctx.author.get_role(self.contributor_role) is None:
             embed = create_embed("You must be a contributor to use this command.")
@@ -287,7 +374,8 @@ class Grottos(commands.Cog):
         await ctx.respond(embed=embed, file=file, ephemeral=private)
 
     @discord.slash_command(description="Update the notes of a saved personal grotto", guild_ids=[guild_id])
-    async def update_grotto(self, ctx, old_note: Option(str, "Grotto Note", required=True),
+    async def update_grotto(self, ctx, old_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
+                                                        required=True),
                             new_note: Option(str, "New Grotto Note", required=True)):
         if ctx.author.get_role(self.contributor_role) is None:
             embed = create_embed("You must be a contributor to use this command.")
@@ -301,7 +389,8 @@ class Grottos(commands.Cog):
         await ctx.respond(embed=embed, ephemeral=True)
 
     @discord.slash_command(description="Delete a saved personal grotto", guild_ids=[guild_id])
-    async def delete_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", required=True)):
+    async def delete_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
+                                                           required=True)):
         if ctx.author.get_role(self.contributor_role) is None:
             embed = create_embed("You must be a contributor to use this command.")
             await ctx.respond(embed=embed)
@@ -353,14 +442,16 @@ class Grottos(commands.Cog):
         await paginator.respond(ctx.interaction, ephemeral=True)
 
     @discord.slash_command(description="Get instructions to a grotto location")
-    async def grotto_location(self, ctx, location: Option(str, "Location (Ex. 05)", required=True)):
-        location = location.upper()
-        if not re.match(r'^[0-9a-fA-F]{2}$', location) or not 1 <= int(location, 16) <= 150:
-            embed = create_embed("Invalid location. Please provide a valid location code (Ex. 05)")
-            await ctx.respond(embed=embed)
-            return
+    async def grotto_location(self, ctx,
+                              location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations,
+                                               required=True)):
+        location = self.extract_grotto_location_code(location)
         with open("data/locations.json", "r") as f:
             locations = json.load(f)["locations"]
+            if location not in locations:
+                embed = create_embed("Invalid location. Please provide a valid location code (Ex. 05)")
+                await ctx.respond(embed=embed)
+                return
             description = "**%s**: ||%s||" % (location, locations[location])
             embed = create_embed("Location Instructions", description=description)
 
@@ -379,8 +470,10 @@ class Grottos(commands.Cog):
                                        suffix: Option(str, "Suffix (Ex. of Woe)", choices=grotto_suffixes["english"],
                                                       required=True),
                                        language_output: Option(str, choices=translation_languages, required=False),
-                                       level: Option(int, "Level (Ex. 1)", required=False),
-                                       location: Option(str, "Location (Ex. 05)", required=False)):
+                                       level: Option(str, "Level (Ex. 1)", autocomplete=get_grotto_levels,
+                                                     required=False) = None,
+                                       location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations,
+                                                         required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "english", language_output, level,
                                             location)
 
@@ -394,8 +487,10 @@ class Grottos(commands.Cog):
                                                                                            required=False),
                                         language_output: Option(str, "翻訳言語 (例：English)",
                                                                 choices=translation_languages, required=False),
-                                        level: Option(int, "Ｌｖ (例：1)", required=False),
-                                        location: Option(str, "場所コード (例：05)", required=False)):
+                                        level: Option(str, "Ｌｖ (例：1)", autocomplete=get_grotto_levels,
+                                                      required=False) = None,
+                                        location: Option(str, "場所コード (例：05)", autocomplete=get_grotto_locations,
+                                                         required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "japanese", language_output, level,
                                             location)
 
@@ -409,8 +504,10 @@ class Grottos(commands.Cog):
                                                       choices=grotto_suffixes["spanish"], required=True),
                                        language_output: Option(str, "Salida de Idioma (Ej. English)",
                                                                choices=translation_languages, required=False),
-                                       level: Option(int, "Nivel (Ej. 1)", required=False),
-                                       location: Option(str, "Localización (Ej. 05)", required=False)):
+                                       level: Option(str, "Nivel (Ej. 1)", autocomplete=get_grotto_levels,
+                                                     required=False) = None,
+                                       location: Option(str, "Localización (Ej. 05)", autocomplete=get_grotto_locations,
+                                                        required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "spanish", language_output, level,
                                             location)
 
@@ -424,8 +521,10 @@ class Grottos(commands.Cog):
                                                      choices=grotto_suffixes["french"], required=True),
                                       language_output: Option(str, "Langue de Sortie (Ex. English)",
                                                               choices=translation_languages, required=False),
-                                      level: Option(int, "Niveau (Ex. 1)", required=False),
-                                      location: Option(str, "Localisation (Ex. 05)", required=False)):
+                                      level: Option(str, "Niveau (Ex. 1)", autocomplete=get_grotto_levels,
+                                                    required=False) = None,
+                                      location: Option(str, "Localisation (Ex. 05)", autocomplete=get_grotto_locations,
+                                                       required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "french", language_output, level,
                                             location)
 
@@ -438,8 +537,10 @@ class Grottos(commands.Cog):
                                                      required=True),
                                       language_output: Option(str, "Sprachen Ausgabe (z.B. English)",
                                                               choices=translation_languages, required=False),
-                                      level: Option(int, "Level (z.B. 1)", required=False),
-                                      location: Option(str, "Standort (z.B. 05)", required=False)):
+                                      level: Option(str, "Level (z.B. 1)", autocomplete=get_grotto_levels,
+                                                    required=False) = None,
+                                      location: Option(str, "Standort (z.B. 05)", autocomplete=get_grotto_locations,
+                                                       required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "german", language_output, level,
                                             location)
 
@@ -452,7 +553,10 @@ class Grottos(commands.Cog):
                                        suffix: Option(str, "Suffix (Ex. dell’Angoscia)",
                                                       choices=grotto_suffixes["italian"], required=True),
                                        language_output: Option(str, choices=translation_languages, required=False),
-                                       level: Option(int, required=False), location: Option(str, required=False)):
+                                       level: Option(str, "Level (Ex. 1)", autocomplete=get_grotto_levels,
+                                                     required=False) = None,
+                                       location: Option(str, "Location (Ex. 05)", autocomplete=get_grotto_locations,
+                                                        required=False) = None):
         await self.translate_grotto_command(ctx, material, environment, suffix, "italian", language_output, level,
                                             location)
 
@@ -509,7 +613,7 @@ class Grottos(commands.Cog):
             return None
         return cleaned.zfill(4)
 
-    def create_grotto_result(self, parsed, url=None):
+    def create_grotto_result(self, parsed, url=None, location_filter=None):
         special = is_special(parsed)
         color = discord.Color.gold() if special else discord.Color.green()
         embed = create_embed(None, color=color)
@@ -569,6 +673,8 @@ class Grottos(commands.Cog):
                     chests_value = value
                 if key == "Locations":
                     values = [str(x).zfill(2) for x in parsed[i + 9:]]
+                    if location_filter is not None:
+                        values = [location for location in values if location == location_filter]
                     for location in values:
                         files.append({"id": 0, "file": "grotto_images/%s.png" % location})
                     locations_values = values
@@ -598,7 +704,7 @@ class Grottos(commands.Cog):
                                 chests=str(chests), locations=str(locations_values))
         return embed, files, grotto
 
-    async def grotto_seed_func(self, seed, rank_number):
+    async def grotto_seed_func(self, seed, rank_number, location=None):
         map_code = parsers.grotto_ranks[rank_number] + seed
         url = self.grotto_details_url + map_code
 
@@ -631,7 +737,11 @@ class Grottos(commands.Cog):
             chest_match = re.search(rf"<strong>{chest_rank}:</strong>\s*(\d+)", text)
             chest_values.append(chest_match.group(1) if chest_match is not None else "0")
 
-        locations = re.findall(r"<div class=\"minimap\"[^>]*>\s*([0-9A-F]{2})\s*</div>", text, flags=re.I)
+        locations = [location.upper() for location in
+                     re.findall(r"<div class=\"minimap\"[^>]*>\s*([0-9A-F]{2})\s*</div>", text, flags=re.I)]
+
+        if location is not None and location not in locations:
+            return create_embed("No grotto found. Please check seed, rank, and location and try again."), [], None
 
         parsed = (
             seed_match.group(1),
@@ -642,9 +752,9 @@ class Grottos(commands.Cog):
             type_floors_match.group(2).strip(),
             monster_rank_match.group(1).replace("&nbsp;", " ").strip(),
             *chest_values,
-            *[location.upper() for location in locations],
+            *locations,
         )
-        return self.create_grotto_result(parsed, url)
+        return self.create_grotto_result(parsed, url, location)
 
     async def grotto_func(self, material, environment, suffix, level, location):
         async with aiohttp.ClientSession() as session:
@@ -654,9 +764,10 @@ class Grottos(commands.Cog):
                       "envname": environment_name, "suffix": str(grotto_suffixes["english"].index(suffix) + 1),
                       "level": str(level), }
 
-            if location is not None:
+            location_code = self.extract_grotto_location_code(location)
+            if location_code is not None:
                 try:
-                    params["loc"] = str(int(location, base=16))
+                    params["loc"] = str(int(location_code, base=16))
                 except ValueError:
                     pass
 
@@ -694,14 +805,20 @@ class Grottos(commands.Cog):
 
     async def translate_grotto_command(self, ctx, material, environment, suffix, language_input, language_output, level,
                                        location):
+        normalized_level = self.parse_grotto_level(level) if level is not None else None
+        if level is not None and normalized_level is None:
+            embed = create_embed("Invalid level. Please provide a numeric grotto level (Ex. 1).")
+            await ctx.respond(embed=embed)
+            return
+
         await ctx.defer()
 
         embed, material, environment, suffix = await self.translate_grotto(material, environment, suffix,
                                                                            language_input, language_output)
         await ctx.followup.send(embed=embed)
 
-        if level is not None:
-            await self.grotto_command(ctx, material, environment, suffix, level, location)
+        if normalized_level is not None:
+            await self.grotto_command(ctx, material, environment, suffix, normalized_level, location)
 
     async def translate_grotto(self, material, environment, suffix, language_input, language_output):
         with open("data/translations/grottos.json", "r", encoding="utf-8") as fp:

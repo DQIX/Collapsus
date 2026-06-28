@@ -25,8 +25,12 @@ class Monsters(commands.Cog):
         results = []
         for m in monsters:
             monster = parsers.Monster.from_dict(m)
-            if ctx.value.lower() in monster.name.lower() or ctx.value.lower() in monster.number.lower():
+            altname = m.get("altname", "")
+            if (ctx.value.lower() in monster.name.lower() or ctx.value.lower() in monster.number.lower()
+                    or ctx.value.lower() in altname.lower()):
                 results.append(monster.number + " - " + titlecase(monster.name))
+            if len(results) == 25:
+                break
         return results
 
     @discord.slash_command(name="monster", description="Sends info about a monster.")

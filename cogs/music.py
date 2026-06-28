@@ -21,7 +21,13 @@ class Music(commands.Cog):
         self.stop_playlist_requested = False
 
     async def get_songs(self, ctx: discord.AutocompleteContext):
-        return [song for song in parsers.songs if ctx.value.lower() in song.lower()]
+        results = []
+        for song in parsers.songs:
+            if ctx.value.lower() in song.lower():
+                results.append(song)
+            if len(results) == 25:
+                break
+        return results
 
     async def ensure_voice(self, ctx, *, deferred=False):
         voice_state = ctx.author.voice

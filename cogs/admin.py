@@ -36,6 +36,39 @@ class Admin(commands.Cog):
         self.role_es = 1221871392451203113
         self.role_celestrian = 655438935278878720
 
+    @staticmethod
+    def _extract_snowflake(value):
+        if value is None:
+            return None
+
+        candidate = str(value).split(" - ", 1)[0].strip()
+        return int(candidate) if candidate.isdecimal() else None
+
+    async def get_tourney_amounts(self, ctx: discord.AutocompleteContext):
+        query = (ctx.value or "").strip()
+        data_type = ((ctx.options or {}).get("data") or "").lower()
+
+        suggestions = ["2", "4", "8", "16", "32", "64"]
+        if data_type:
+            try:
+                with open(f"data/{data_type}.json", "r", encoding="utf-8") as fp:
+                    data_list = json.load(fp)[data_type]
+                max_amount = len(data_list)
+                suggestions = [amount for amount in suggestions if int(amount) <= max_amount]
+                if str(max_amount) not in suggestions:
+                    suggestions.append(str(max_amount))
+            except (FileNotFoundError, KeyError):
+                pass
+
+        results = []
+        for amount in suggestions:
+            if query in amount:
+                results.append(amount)
+            if len(results) == 25:
+                break
+
+        return results
+
     @discord.slash_command(name="change_invite", guild_ids=[guild_id])
     async def _change_server_invite(self, ctx, invite_code: Option(str, "Server Invite Code", required=True)):
         main.server_invite_code = invite_code
@@ -47,13 +80,32 @@ class Admin(commands.Cog):
         await ctx.respond(embed=embed)
 
     @discord.slash_command(name="edit_forum_message", guild_ids=[guild_id])
-    async def _edit_forum_message(self, ctx, channel: Option(discord.SlashCommandOptionType.channel, "Channel", required=True), thread_id: Option(str, "Thread ID", required=True), message_id: Option(str, "Message ID", required=True), content: Option(str, "Content", required=True)):
-        threads = await channel.archived_threads().flatten()
-        thread = discord.utils.get(threads, id=int(thread_id))
-        await thread.unarchive()
-        message = await thread.fetch_message(message_id)
+    async def _edit_forum_message(self, ctx,
+                                  channel: Option(discord.SlashCommandOptionType.channel, "Channel", required=True),
+                                  thread_id: Option(str, "Thread ID", required=True),
+                                  message_id: Option(str, "Message ID", required=True),
+                                  content: Option(str, "Content", required=True)):
+        thread_id_value = self._extract_snowflake(thread_id)
+        message_id_value = self._extract_snowflake(message_id)
+        if thread_id_value is None or message_id_value is None:
+            embed = create_embed("Invalid thread or message ID.")
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        threads = list(getattr(channel, "threads", [])) + await channel.archived_threads().flatten()
+        thread = discord.utils.get(threads, id=thread_id_value)
+        if thread is None:
+            embed = create_embed("Thread not found.")
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        rearchive = getattr(thread, "archived", False)
+        if rearchive:
+            await thread.unarchive()
+        message = await thread.fetch_message(message_id_value)
         await message.edit(content=content)
-        await thread.archive()
+        if rearchive:
+            await thread.archive()
 
         embed = create_embed("Message Edited", message.jump_url)
         await ctx.respond(embed=embed, ephemeral=True)
@@ -335,7 +387,7 @@ Guardian Angel/Lionheart/Sent from Above/Watched-over One/Storied Saviour: Defau
 
     @discord.slash_command(name="tourney", description="Generates a tournament.", guild_ids=[guild_id])
     async def _tourney(self, ctx, name: Option(str, "Name (Ex. Cutest Monster)", required=True),
-                       amount: Option(int, "Amount (Ex. 8)", required=True),
+                       amount: Option(str, "Amount (Ex. 8)", autocomplete=get_tourney_amounts, required=True),
                        data: Option(str, "Data (Ex. Monster)", choices=parsers.tourney_data_types, required=True)):
         await ctx.defer()
 
@@ -344,9 +396,19 @@ Guardian Angel/Lionheart/Sent from Above/Watched-over One/Storied Saviour: Defau
             json_data = json.load(fp)
 
         data_list = json_data[data_type]
+        if not amount.isdecimal():
+            embed = create_embed("Invalid amount. Please provide a numeric tournament size.")
+            await ctx.followup.send(embed=embed, ephemeral=True)
+            return
+
+        amount_value = int(amount)
+        if amount_value <= 0 or amount_value > len(data_list):
+            embed = create_embed("Invalid amount. Please choose a value between 1 and %s." % len(data_list))
+            await ctx.followup.send(embed=embed, ephemeral=True)
+            return
 
         parser = getattr(parsers, data_type[:-1].capitalize())
-        data_picked = [parser.from_dict(data) for data in random.sample(data_list, amount)]
+        data_picked = [parser.from_dict(data) for data in random.sample(data_list, amount_value)]
         for item in data_picked:
             if item.image == "":
                 image_url = getattr(__import__(__name__), data_type[:-1] + "_images_url")

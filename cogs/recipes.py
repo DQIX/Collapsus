@@ -34,6 +34,8 @@ class Recipes(commands.Cog):
             recipe = parsers.Recipe.from_dict(r)
             if ctx.value.lower() in recipe.result.lower():
                 results.append(titlecase(recipe.result))
+            if len(results) == 25:
+                break
         return results
 
     def _recipe_image_url(self, name: str, recipe_type: str) -> str | None:

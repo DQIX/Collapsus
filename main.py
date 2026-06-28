@@ -105,6 +105,14 @@ def _normalize_translation_text(text):
     )
 
 
+def _extract_leading_number(value):
+    if value is None:
+        return None
+
+    candidate = str(value).split(" - ", 1)[0].strip().removeprefix("#")
+    return int(candidate) if candidate.isdecimal() else None
+
+
 async def get_translations(ctx: discord.AutocompleteContext):
     language_input = _normalize_translation_language((ctx.options or {}).get("language_input"))
     values = all_translation_values if language_input is None else translation_values_by_language[language_input]
@@ -114,6 +122,25 @@ async def get_translations(ctx: discord.AutocompleteContext):
     for value in values:
         if query in _normalize_translation_text(value):
             results.append(value)
+        if len(results) == 25:
+            break
+
+    return results
+
+
+async def get_quests(ctx: discord.AutocompleteContext):
+    with open("data/quests.json", "r", encoding="utf-8") as fp:
+        quests = json.load(fp)["quests"]
+
+    query = _normalize_translation_text(ctx.value or "")
+    results = []
+
+    for quest in quests:
+        quest_number = str(quest["number"])
+        quest_name = quest["name"]
+        label = f"{quest_number} - {quest_name}"
+        if query in _normalize_translation_text(quest_number) or query in _normalize_translation_text(quest_name):
+            results.append(label)
         if len(results) == 25:
             break
 
@@ -176,12 +203,17 @@ A bot created by <@{dev_id}> for The Quester's Rest (<{server_invite_url + serve
 
 
 @bot.command(name="quest", description="Sends info about a quest.")
-async def _quest(ctx, quest_number: Option(int, "Quest Number (1-184)", required=True)):
+async def _quest(ctx, quest_number: Option(str, "Quest Number (1-184)", autocomplete=get_quests, required=True)):
     with open("data/quests.json", "r", encoding="utf-8") as fp:
         data = json.load(fp)
 
     quests = data["quests"]
-    index = quest_number - 1
+    quest_number_value = _extract_leading_number(quest_number)
+    if quest_number_value is None:
+        embed = create_embed("No quest found with the number `%s`. Please check number and try again." % quest_number)
+        return await ctx.respond(embed=embed)
+
+    index = quest_number_value - 1
     if index >= len(quests) or index < 0:
         embed = create_embed("No quest found with the number `%s`. Please check number and try again." % quest_number)
         return await ctx.respond(embed=embed)
