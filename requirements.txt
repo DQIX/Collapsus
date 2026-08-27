@@ -6,4 +6,4 @@ parsel~=1.11.0
 titlecase~=2.4.1
 emoji~=2.15.0
 pillow~=12.1.1
-requests~=2.32.5
+requests~=2.33.1
