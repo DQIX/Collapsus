@@ -1,7 +1,5 @@
 ![Collapsus](https://cdn.discordapp.com/emojis/856330729528361000.png)
 
-I've been revived by [@CompuGeniusCode](https://github.com/CompuGeniusCode) to aid guests in The Quester's Rest.
+I've been revived by [@Zevya](https://github.com/ZevyaDev) to aid guests in The Quester's Rest.
 
-Premium Features can be obtained by becoming a [Patreon](https://patreon.com/compugeniusprograms)
-
-https://github.com/DQIX/Collapsus
+Premium Features can be obtained by becoming a [Patreon](https://www.patreon.com/Zevya)
