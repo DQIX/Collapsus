@@ -1,7 +1,7 @@
 py-cord[voice]~=2.7.1
 python-dotenv~=1.2.2
 dataclasses-json~=0.6.7
-aiohttp~=3.13.3
+aiohttp~=3.13.5
 parsel~=1.11.0
 titlecase~=2.4.1
 emoji~=2.15.0
