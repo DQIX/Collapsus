@@ -7,9 +7,9 @@ import requests
 from PIL import Image
 from discord.ext.pages import Paginator, Page
 
-dev_tag = "@CompuGeniusCode"
-dev_patreon = "patreon.com/compugeniusprograms"
-dev_cashapp = "cash.app/$compugeniuscode"
+dev_tag = "@zevya"
+dev_patreon = "patreon.com/zevya"
+dev_cashapp = "cash.app/$zevya"
 
 
 def create_embed(title, description=None, color=discord.Color.green(),
