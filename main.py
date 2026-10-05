@@ -10,7 +10,7 @@ from titlecase import titlecase
 
 import grotto_db
 import parsers
-from utils import create_embed, dev_tag
+from utils import create_embed, dev_tag, dev_patreon
 
 dotenv.load_dotenv()
 token = os.getenv("TOKEN")
@@ -163,43 +163,85 @@ async def on_ready():
         global server_invite_code
         server_invite_code = data["server_invite_code"]
 
-    for command in bot.commands:
-        print(f"{command.name} | {command.id}")
-
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.watching, name="over The Quester's Rest. Type /help ."))
 
 
+grotto_commands = {
+    "grotto": "Search for a grotto",
+    "gg": "Search for a grotto at a known location",
+    "grotto_seed": "Look up a grotto by seed and rank",
+    "grotto_location": "Directions to a grotto location",
+}
+
+help_sections = {
+    "Game Info": {
+        "monster": "Monster stats, drops and haunts",
+        "quest": "Quest request, solution and reward",
+        "recipe": "Alchemy recipe for an item",
+        "recipe_cascade": "Every ingredient a recipe needs, all the way down",
+        "translate": "Translate a word or phrase",
+    },
+    "Music": {
+        "song": "Play a song in your voice channel",
+        "songs_all": "Play every song",
+        "skip": "Skip to the next song during `/songs_all`",
+        "stop": "Stop playing",
+    },
+    "Fun": {
+        "character": "Generate a random character",
+        "quote": "Post a server quote",
+    },
+}
+
+contributor_commands = {
+    "my_grottos": "Browse your saved grottos",
+    "get_grotto": "Show a saved grotto",
+    "update_grotto": "Change a saved grotto's notes",
+    "delete_grotto": "Delete a saved grotto",
+}
+
+
+def _command_mention(name):
+    command = bot.get_application_command(name)
+    if command is None or (command.parent or command).id is None:
+        return f"`/{name}`"
+    return command.mention
+
+
+def _command_lines(commands):
+    return "\n".join(f"{_command_mention(name)} — {summary}" for name, summary in commands.items())
+
+
 @bot.command(name="help", description="Get help for using the bot.")
 async def _help(ctx):
-    description = f'''
-A bot created by <@{dev_id}> for The Quester's Rest (<{server_invite_url + server_invite_code}>).
+    description = f"Dragon Quest IX helper for The Quester's Rest, made by <@{dev_id}>."
+    if ctx.guild_id == guild_id:
+        description += f"\nGrotto commands only work in <#{grotto_bot_commands_channel}>."
 
-</character:984820203483459635> - *Generate a random character*
-</gg:1038001809660334122> - *Get grotto info (location required) - <#{grotto_bot_commands_channel}> only*
-</grotto:1038001809660334121> - *Search for a grotto - <#{grotto_bot_commands_channel}> only*
-</grotto_seed:1519476166929420308> - *Get a grotto directly by seed and rank - <#{grotto_bot_commands_channel}> only*
-</monster:980895182859935765> - *Get monster info*
-</quest:977175507558875167> - *Get quest info*
-</recipe:977175507558875168> - *Get an item's recipe*
-</recipe_cascade:1236865730683863070> - *Get cascading info about a recipe*
-</song:1132033677585563799> - *Play a song*
-</songs_all:1132513511570935809>- *Play all songs*
-</stop:1132497509353267275> - *Stop playing songs*
-</translate:1038483499121913956> - *Translate a word or phrase*
-</quote:1258579663354335302> - *Get a quote*
-</grotto_location:1241043446882500681> - *Get grotto location info - <#{grotto_bot_commands_channel}> only*
-/grotto_translate [language] - *Translate a grotto - <#{grotto_bot_commands_channel}> only*
+    embed = create_embed("Collapsus Help", description=description)
+    embed.set_thumbnail(url=logo_url)
 
-</help:977004400352583690> - *Displays this message*
-'''
+    translate_mentions = " ".join(
+        _command_mention(f"grotto_translate {language}") for language in parsers.translation_languages_simple
+    )
+    embed.add_field(name="Grottos", value=_command_lines(grotto_commands), inline=False)
+    embed.add_field(name="Grotto Translation",
+                    value=f"Translate a grotto name. Add a level to search for it too.\n{translate_mentions}",
+                    inline=False)
+    for title, commands in help_sections.items():
+        embed.add_field(name=title, value=_command_lines(commands), inline=False)
+    embed.add_field(name="Contributors",
+                    value=f"Become a contributor on [Patreon](https://{dev_patreon}) to save grottos with the "
+                          f"**Save Grotto** button on search results.\n{_command_lines(contributor_commands)}",
+                    inline=False)
 
-    if ctx.guild_id != guild_id:
-        description = description.replace(f" - <#{grotto_bot_commands_channel}> only", "")
+    links = discord.ui.View(timeout=None)
+    links.add_item(discord.ui.Button(label="Website", url=website_url))
+    links.add_item(discord.ui.Button(label="Join The Quester's Rest", url=server_invite_url + server_invite_code))
+    links.add_item(discord.ui.Button(label="Support on Patreon", url=f"https://{dev_patreon}"))
 
-    embed = create_embed("Collapsus Help [Click For Server Website]", description=description, error="", image=logo_url,
-                         url=website_url)
-    await ctx.respond(embed=embed)
+    await ctx.respond(embed=embed, view=links)
 
 
 @bot.command(name="quest", description="Sends info about a quest.")
