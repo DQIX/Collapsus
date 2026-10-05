@@ -232,14 +232,14 @@ async def _help(ctx):
     for title, commands in help_sections.items():
         embed.add_field(name=title, value=_command_lines(commands), inline=False)
     embed.add_field(name="Contributors",
-                    value=f"Become a contributor on [Patreon](https://{dev_patreon}) to save grottos with the "
+                    value=f"Become a contributor on [Patreon]({dev_patreon}) to save grottos with the "
                           f"**Save Grotto** button on search results.\n{_command_lines(contributor_commands)}",
                     inline=False)
 
     links = discord.ui.View(timeout=None)
     links.add_item(discord.ui.Button(label="Website", url=website_url))
     links.add_item(discord.ui.Button(label="Join The Quester's Rest", url=server_invite_url + server_invite_code))
-    links.add_item(discord.ui.Button(label="Support on Patreon", url=f"https://{dev_patreon}"))
+    links.add_item(discord.ui.Button(label="Support on Patreon", url=dev_patreon))
 
     await ctx.respond(embed=embed, view=links)
 
