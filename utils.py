@@ -8,12 +8,12 @@ from PIL import Image
 from discord.ext.pages import Paginator, Page
 
 dev_tag = "@zevya"
-dev_patreon = "patreon.com/zevya"
-dev_cashapp = "cash.app/$zevya"
+dev_patreon = "https://patreon.com/zevya"
+dev_cashapp = "https://cash.app/$zevya"
 
 
 def create_embed(title, description=None, color=discord.Color.green(),
-                 footer="Consider supporting development:\n%s\n%s" % (dev_patreon, dev_cashapp),
+                 footer="Consider supporting development:\n%s - %s" % (dev_patreon, dev_cashapp),
                  error="Any errors? Please report to %s" % dev_tag, image="", *, url="", author=""):
     embed = discord.Embed(title=title, description=description, url=url, color=color)
     embed.set_footer(text="%s\n%s" % (footer, error))

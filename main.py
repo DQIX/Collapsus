@@ -188,9 +188,9 @@ help_sections = {
         "skip": "Skip to the next song during `/songs_all`",
         "stop": "Stop playing",
     },
-    "Fun": {
-        "character": "Generate a random character",
-        "quote": "Post a server quote",
+    "Utilities": {
+        "character": "Roll a character for a random run",
+        "quote": "Send a saved answer to a frequently asked question",
     },
 }
 
