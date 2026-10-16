@@ -21,8 +21,26 @@ def create_table():
                 notes text,
                 owner text
                 )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS search_counts (
+                user_id text PRIMARY KEY,
+                count int
+                )''')
     conn.commit()
     conn.close()
+
+
+def increment_search_count(user_id):
+    conn = sqlite3.connect('grottos.db')
+    c = conn.cursor()
+
+    c.execute('''INSERT INTO search_counts VALUES (?, 1)
+                 ON CONFLICT(user_id) DO UPDATE SET count = count + 1''', (str(user_id),))
+    c.execute('''SELECT count FROM search_counts WHERE user_id = ?''', (str(user_id),))
+    count = c.fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    return count
 
 
 def insert_grotto(grotto):

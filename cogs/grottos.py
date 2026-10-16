@@ -17,7 +17,8 @@ import parsers
 from main import guild_id
 from parsers import grotto_prefixes, grotto_environments, grotto_suffixes, translation_languages, is_special, \
     create_grotto, grotto_keys, grotto_chest_ranks, Translation, translation_languages_simple
-from utils import create_embed, dev_tag, create_paginator, create_collage
+from utils import create_embed, dev_tag, create_paginator, create_collage, is_contributor, contributor_pitch, \
+    contributor_link_view, contributor_footer, contributor_perks_footer
 
 GROTTO_RANK_CHOICES = [
     discord.OptionChoice(name=f"{rank} ({code})", value=code)
@@ -26,6 +27,7 @@ GROTTO_RANK_CHOICES = [
 GROTTO_RANK_CODE_TO_NUMBER = {code: rank for rank, code in parsers.grotto_ranks.items()}
 GROTTO_LOCATION_CODES = [f"{location:02X}" for location in range(1, 151)]
 GROTTO_LEVEL_SUGGESTIONS = [str(level) for level in range(1, 100)]
+CONTRIBUTOR_NUDGE_SEARCH_COUNT = 25
 
 
 def setup(bot):
@@ -59,6 +61,10 @@ class SaveGrottoView(discord.ui.View):
 
     @discord.ui.button(label="Save Grotto", style=discord.ButtonStyle.primary)
     async def button_callback(self, button, interaction):
+        if not is_contributor(interaction.user):
+            embed = contributor_pitch(interaction.client, "Saving grottos is a contributor perk.")
+            await interaction.response.send_message(embed=embed, view=contributor_link_view(), ephemeral=True)
+            return
         self.grotto.owner = interaction.user.id
         await interaction.response.send_modal(SaveGrottoModal(self.grotto))
 
@@ -70,7 +76,6 @@ class Grottos(commands.Cog):
         self.grotto_search_url = "https://www.yabd.org/apps/dq9/grottosearch.php"
         self.grotto_details_url = "https://www.yabd.org/apps/dq9/grottodetails.php?map="
         self.admin_user = 496392770374860811
-        self.contributor_role = 1241808955580219453
 
     grotto_translate = SlashCommandGroup("grotto_translate", "Grotto Translation Commands")
 
@@ -201,8 +206,7 @@ class Grottos(commands.Cog):
             file = discord.File(data, file_name.removeprefix("collages/"))
             embed.set_image(url="attachment://%s" % file_name.removeprefix("collages/"))
 
-        premium = ctx.author.get_role(self.contributor_role) is not None
-        view = SaveGrottoView(grotto) if premium and grotto is not None else None
+        view = SaveGrottoView(grotto) if grotto is not None else None
 
         if file is not None:
             await ctx.followup.send(embed=embed, file=file, view=view)
@@ -210,6 +214,7 @@ class Grottos(commands.Cog):
             await ctx.followup.send(embed=embed, view=view)
         else:
             await ctx.followup.send(embed=embed)
+        await self.nudge_toward_contributing(ctx)
 
     @discord.slash_command(description="Search for a Grotto Using Abbreviations (Location Required)")
     async def gs(self, ctx, material: Option(str, "Material Abbreviation (Ex. G)", required=True),
@@ -248,13 +253,9 @@ class Grottos(commands.Cog):
                         all_files.extend(files)
                         all_grottos.extend(grottos)
 
-        premium = ctx.author.get_role(self.contributor_role) is not None
         if len(all_embeds) > 1:
-            if premium:
-                views = [SaveGrottoView(grotto) for grotto in all_grottos]
-                paginator = create_paginator(all_embeds, all_files, views)
-            else:
-                paginator = create_paginator(all_embeds, all_files)
+            views = [SaveGrottoView(grotto) for grotto in all_grottos]
+            paginator = create_paginator(all_embeds, all_files, views)
             await paginator.respond(ctx.interaction)
         else:
             if len(all_embeds) == 1:
@@ -271,23 +272,16 @@ class Grottos(commands.Cog):
                 file = None
 
             if file is not None:
-                if premium:
-                    view = SaveGrottoView(all_grottos[0])
-                    await ctx.followup.send(embed=embed, file=file, view=view)
-                else:
-                    await ctx.followup.send(embed=embed, file=file)
+                await ctx.followup.send(embed=embed, file=file, view=SaveGrottoView(all_grottos[0]))
+            elif len(all_grottos) > 0:
+                await ctx.followup.send(embed=embed, view=SaveGrottoView(all_grottos[0]))
             else:
-                if premium and len(all_grottos) > 0:
-                    view = SaveGrottoView(all_grottos[0])
-                    await ctx.followup.send(embed=embed, view=view)
-                else:
-                    await ctx.followup.send(embed=embed)
+                await ctx.followup.send(embed=embed)
+        await self.nudge_toward_contributing(ctx)
 
     @discord.slash_command(description="Browse saved personal grottos", guild_ids=[guild_id])
     async def my_grottos(self, ctx):
-        if ctx.author.get_role(self.contributor_role) is None:
-            embed = create_embed("You must be a contributor to use this command.")
-            await ctx.respond(embed=embed)
+        if not await self.require_contributor(ctx):
             return
         grottos = grotto_db.get_grottos(ctx.author.id)
         if len(grottos) == 0:
@@ -319,9 +313,7 @@ class Grottos(commands.Cog):
     async def get_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
                                                         required=True),
                          private: Option(bool, "Keep Private", required=False) = False):
-        if ctx.author.get_role(self.contributor_role) is None:
-            embed = create_embed("You must be a contributor to use this command.")
-            await ctx.respond(embed=embed)
+        if not await self.require_contributor(ctx):
             return
         grotto = grotto_db.get_grotto(ctx.author.id, grotto_note)
         if grotto is None:
@@ -358,7 +350,8 @@ class Grottos(commands.Cog):
                     description += "\n**%s**: ||%s||" % (location, locations[location])
                     files.append({"id": 0, "file": "grotto_images/%s.png" % location})
 
-        embed = create_embed(title, description=description, footer="Thank you for supporting development!")
+        footer = contributor_footer if private else "Saved with Collapsus contributor perks. See /support."
+        embed = create_embed(title, description=description, footer=footer)
 
         fs = [file["file"] for file in files if file["id"] == 0]
         file_name = "collages/collage0.png"
@@ -377,9 +370,7 @@ class Grottos(commands.Cog):
     async def update_grotto(self, ctx, old_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
                                                         required=True),
                             new_note: Option(str, "New Grotto Note", required=True)):
-        if ctx.author.get_role(self.contributor_role) is None:
-            embed = create_embed("You must be a contributor to use this command.")
-            await ctx.respond(embed=embed)
+        if not await self.require_contributor(ctx):
             return
         if grotto_db.update_grotto(ctx.author.id, old_note, new_note):
             embed = create_embed("Grotto updated successfully.", footer="Thank you for supporting development!")
@@ -391,9 +382,7 @@ class Grottos(commands.Cog):
     @discord.slash_command(description="Delete a saved personal grotto", guild_ids=[guild_id])
     async def delete_grotto(self, ctx, grotto_note: Option(str, "Grotto Note", autocomplete=get_saved_grotto_notes,
                                                            required=True)):
-        if ctx.author.get_role(self.contributor_role) is None:
-            embed = create_embed("You must be a contributor to use this command.")
-            await ctx.respond(embed=embed)
+        if not await self.require_contributor(ctx):
             return
         if grotto_db.delete_grotto(ctx.author.id, grotto_note):
             embed = create_embed("Grotto deleted successfully.", footer="Thank you for supporting development!")
@@ -571,13 +560,9 @@ class Grottos(commands.Cog):
                 return None, None, None
             return embeds, files, grottos
 
-        premium = ctx.author.get_role(self.contributor_role) is not None
         if len(embeds) > 1:
-            if premium:
-                views = [SaveGrottoView(grotto) for grotto in grottos]
-                paginator = create_paginator(embeds, files, views)
-            else:
-                paginator = create_paginator(embeds, files)
+            views = [SaveGrottoView(grotto) for grotto in grottos]
+            paginator = create_paginator(embeds, files, views)
             await paginator.respond(ctx.interaction)
         else:
             if len(embeds) == 1:
@@ -594,17 +579,28 @@ class Grottos(commands.Cog):
                 file = None
 
             if file is not None:
-                if premium:
-                    view = SaveGrottoView(grottos[0])
-                    await ctx.followup.send(embed=embed, file=file, view=view)
-                else:
-                    await ctx.followup.send(embed=embed, file=file)
+                await ctx.followup.send(embed=embed, file=file, view=SaveGrottoView(grottos[0]))
+            elif len(grottos) > 0:
+                await ctx.followup.send(embed=embed, view=SaveGrottoView(grottos[0]))
             else:
-                if premium and len(grottos) > 0:
-                    view = SaveGrottoView(grottos[0])
-                    await ctx.followup.send(embed=embed, view=view)
-                else:
-                    await ctx.followup.send(embed=embed)
+                await ctx.followup.send(embed=embed)
+        await self.nudge_toward_contributing(ctx)
+
+    async def require_contributor(self, ctx):
+        if is_contributor(ctx.author):
+            return True
+        embed = contributor_pitch(self.bot, "This command is a contributor perk.")
+        await ctx.respond(embed=embed, view=contributor_link_view(), ephemeral=True)
+        return False
+
+    async def nudge_toward_contributing(self, ctx):
+        if is_contributor(ctx.author):
+            return
+        if grotto_db.increment_search_count(ctx.author.id) != CONTRIBUTOR_NUDGE_SEARCH_COUNT:
+            return
+        embed = contributor_pitch(self.bot, f"That's {CONTRIBUTOR_NUDGE_SEARCH_COUNT} grotto searches!",
+                                  footer=f"{contributor_perks_footer}\nThis message only shows once.")
+        await ctx.followup.send(embed=embed, view=contributor_link_view(), ephemeral=True)
 
     @staticmethod
     def normalize_grotto_seed(seed):

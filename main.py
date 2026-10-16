@@ -6,11 +6,13 @@ import unicodedata
 import discord
 import dotenv
 from discord import Option
+from discord.ext import tasks
 from titlecase import titlecase
 
 import grotto_db
 import parsers
-from utils import create_embed, dev_tag, dev_patreon
+from utils import create_embed, dev_tag, dev_patreon, dev_cashapp, contributor_role_id, contributor_perks_footer, \
+    invoker_is_contributor, is_contributor, command_mention
 
 dotenv.load_dotenv()
 token = os.getenv("TOKEN")
@@ -29,6 +31,9 @@ website_url = "https://dq9.carrd.co"
 
 server_invite_url = "https://discord.gg/"
 server_invite_code = ""
+monthly_hosting_cost = ""
+
+help_presence = discord.Activity(type=discord.ActivityType.watching, name="over The Quester's Rest. Type /help .")
 
 character_image_url = "https://www.woodus.com/den/games/dq9ds/characreate/index.php?"
 
@@ -160,11 +165,37 @@ async def on_ready():
 
     with open("config.json", "r", encoding="utf-8") as fp:
         data = json.load(fp)
-        global server_invite_code
+        global server_invite_code, monthly_hosting_cost
         server_invite_code = data["server_invite_code"]
+        monthly_hosting_cost = data.get("monthly_hosting_cost", "")
 
-    await bot.change_presence(
-        activity=discord.Activity(type=discord.ActivityType.watching, name="over The Quester's Rest. Type /help ."))
+    if not _rotate_presence.is_running():
+        _rotate_presence.start()
+
+
+@bot.before_invoke
+async def _remember_contributor(ctx):
+    invoker_is_contributor.set(is_contributor(ctx.author))
+
+
+def _contributor_count():
+    guild = bot.get_guild(guild_id)
+    role = guild.get_role(contributor_role_id) if guild is not None else None
+    return len(role.members) if role is not None else 0
+
+
+def _contributors_label(count):
+    return f"{count} contributor" if count == 1 else f"{count} contributors"
+
+
+@tasks.loop(minutes=15)
+async def _rotate_presence():
+    count = _contributor_count()
+    if _rotate_presence.current_loop % 2 == 0 or count == 0:
+        await bot.change_presence(activity=help_presence)
+    else:
+        await bot.change_presence(
+            activity=discord.CustomActivity(name=f"Kept online by {_contributors_label(count)}. Type /support ."))
 
 
 grotto_commands = {
@@ -191,6 +222,7 @@ help_sections = {
     "Utilities": {
         "character": "Roll a character for a random run",
         "quote": "Send a saved answer to a frequently asked question",
+        "support": "How Collapsus stays online and how to help",
     },
 }
 
@@ -203,10 +235,7 @@ contributor_commands = {
 
 
 def _command_mention(name):
-    command = bot.get_application_command(name)
-    if command is None or (command.parent or command).id is None:
-        return f"`/{name}`"
-    return command.mention
+    return command_mention(bot, name)
 
 
 def _command_lines(commands):
@@ -240,6 +269,35 @@ async def _help(ctx):
     links.add_item(discord.ui.Button(label="Website", url=website_url))
     links.add_item(discord.ui.Button(label="Join The Quester's Rest", url=server_invite_url + server_invite_code))
     links.add_item(discord.ui.Button(label="Support on Patreon", url=dev_patreon))
+
+    await ctx.respond(embed=embed, view=links)
+
+
+@bot.command(name="support", description="See how Collapsus stays online and how to help.")
+async def _support(ctx):
+    description = "Collapsus is free for everyone, and contributors pay to keep it online."
+    count = _contributor_count()
+    if monthly_hosting_cost != "" and count > 0:
+        description += f"\nHosting costs **{monthly_hosting_cost}** a month, covered by **{_contributors_label(count)}**."
+    elif monthly_hosting_cost != "":
+        description += f"\nHosting costs **{monthly_hosting_cost}** a month."
+    elif count > 0:
+        description += f"\n**{_contributors_label(count)}** keep it online right now."
+
+    embed = create_embed("Support Collapsus", description=description, footer=contributor_perks_footer)
+    embed.set_thumbnail(url=logo_url)
+    embed.add_field(name="Contributor Perks",
+                    value=f"Save any grotto with the **Save Grotto** button on search results.\n"
+                          f"{_command_lines(contributor_commands)}",
+                    inline=False)
+    embed.add_field(name="Other Ways to Help",
+                    value=f"Report errors or contribute data to {dev_tag}.",
+                    inline=False)
+
+    links = discord.ui.View(timeout=None)
+    links.add_item(discord.ui.Button(label="Become a Contributor", url=dev_patreon))
+    links.add_item(discord.ui.Button(label="Cash App", url=dev_cashapp))
+    links.add_item(discord.ui.Button(label="Join The Quester's Rest", url=server_invite_url + server_invite_code))
 
     await ctx.respond(embed=embed, view=links)
 

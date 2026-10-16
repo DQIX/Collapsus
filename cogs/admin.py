@@ -72,12 +72,25 @@ class Admin(commands.Cog):
     @discord.slash_command(name="change_invite", guild_ids=[guild_id])
     async def _change_server_invite(self, ctx, invite_code: Option(str, "Server Invite Code", required=True)):
         main.server_invite_code = invite_code
-
-        with open("config.json", "w", encoding="utf-8") as fp:
-            json.dump({"server_invite_code": main.server_invite_code}, fp, indent=2)
+        self._save_config()
 
         embed = create_embed("Server Invite Code Changed", main.server_invite_url + main.server_invite_code)
         await ctx.respond(embed=embed)
+
+    @discord.slash_command(name="change_hosting_cost", guild_ids=[guild_id])
+    async def _change_hosting_cost(self, ctx, monthly_cost: Option(str, "Monthly Hosting Cost (Ex. $20)",
+                                                                   required=True)):
+        main.monthly_hosting_cost = monthly_cost
+        self._save_config()
+
+        embed = create_embed("Hosting Cost Changed", main.monthly_hosting_cost)
+        await ctx.respond(embed=embed)
+
+    @staticmethod
+    def _save_config():
+        with open("config.json", "w", encoding="utf-8") as fp:
+            json.dump({"server_invite_code": main.server_invite_code,
+                       "monthly_hosting_cost": main.monthly_hosting_cost}, fp, indent=2)
 
     @discord.slash_command(name="edit_forum_message", guild_ids=[guild_id])
     async def _edit_forum_message(self, ctx,
